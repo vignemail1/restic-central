@@ -1,51 +1,51 @@
-# Architecture et modèle de données
+# Architecture and data model
 
-Statut : architecture proposée, non implémentée.
+Status: proposed architecture, not implemented.
 
-## Composants
+## Components
 
 ```text
-Administrateur -> interface/API du serveur
-Serveur -> configurations, scheduler, jobs, événements, incidents, rapports
-Agent -> HTTPS sortant vers le serveur : acquisition et remontées
-Agent -> processus Restic -> dépôts de sauvegarde
-Serveur -> providers email / Matrix / Slack
+Administrator -> server interface/API
+Server -> configurations, scheduler, jobs, events, incidents, reports
+Agent -> outbound HTTPS to server: acquisition and reporting
+Agent -> Restic process -> backup repositories
+Server -> email / Matrix / Slack providers
 ```
 
-Le serveur conserve les métadonnées de coordination. Les données sauvegardées circulent entre l'agent et les dépôts ; elles ne transitent pas par le serveur de coordination par défaut.
+The server stores coordination metadata. Backup data flows between the agent and repositories; by default, it does not pass through the coordination server.
 
-## Responsabilités
+## Responsibilities
 
-Serveur : gérer les identités, configurations immuables, échéances, réservations de jobs, états observés, incidents et livraisons de notifications.
+Server: manage identities, immutable configurations, scheduled occurrences, job reservations, observed states, incidents, and notification deliveries.
 
-Agent : valider la configuration, résoudre les secrets locaux, contrôler les préconditions, acquérir un verrou, lancer Restic sans shell implicite, collecter les sorties, persister les événements et réconcilier l'état après redémarrage.
+Agent: validate configuration, resolve local secrets, check prerequisites, acquire a lock, run Restic without an implicit shell, collect output, persist events, and reconcile state after restart.
 
-## Planification
+## Scheduling
 
-Orientation MVP : le serveur est l'unique autorité de déclenchement. L'agent conserve la configuration mais ne recrée pas indépendamment les échéances. En panne serveur, un job déjà accepté peut continuer ; aucun nouveau job central n'est acquis.
+MVP direction: the server is the sole execution-trigger authority. The agent retains its configuration but does not independently recreate scheduled occurrences. During a server outage, an already accepted job may continue; no new central job is acquired.
 
-Le mode autonome éventuel sera explicite et fera l'objet d'un arbitrage ultérieur. Ne jamais superposer deux schedulers sans protocole de déduplication.
+Any future autonomous mode will be explicit and subject to a later decision. Never layer two schedulers without a deduplication protocol.
 
-Chaque planification doit définir fuseau IANA, comportement aux changements d'heure, fenêtre autorisée, jitter, délai de démarrage, politique de rattrapage et périodes de maintenance. Recommandation initiale : rattraper au plus une occurrence devenue pertinente, sans rejouer toute une accumulation.
+Each schedule must define an IANA timezone, daylight-saving behavior, permitted execution window, jitter, start deadline, catch-up policy, and maintenance periods. Initial recommendation: catch up at most one relevant occurrence instead of replaying an entire backlog.
 
-## Entités
+## Entities
 
-| Entité | Informations principales |
+| Entity | Main information |
 |---|---|
-| Agent | identité stable, capacités, version, dernier contact, statut d'enrôlement |
-| Repository | backend, emplacement, options, références de secrets |
-| BackupPolicy | sources, exclusions, destinations, planification, règles de succès |
-| ConfigRevision | contenu immuable, version de schéma, empreinte |
-| Job | politique, révision, échéance, demandeur, état agrégé |
-| Attempt | job, numéro, agent, dates, état, réservation |
-| DestinationResult | dépôt, opération, code Restic, snapshot, métriques |
-| Event | identifiant, tentative, séquence, type, dates, payload |
-| Incident | clé de regroupement, ouverture, acquittement, résolution |
-| NotificationDelivery | canal, destinataire, résultat, retry |
+| Agent | stable identity, capabilities, version, last contact, enrollment status |
+| Repository | backend, location, options, secret references |
+| BackupPolicy | sources, exclusions, destinations, schedule, success rules |
+| ConfigRevision | immutable content, schema version, fingerprint |
+| Job | policy, revision, scheduled time, requester, aggregate state |
+| Attempt | job, attempt number, agent, timestamps, state, reservation |
+| DestinationResult | repository, operation, Restic exit code, snapshot, metrics |
+| Event | identifier, attempt, sequence, type, timestamps, payload |
+| Incident | grouping key, opening, acknowledgment, resolution |
+| NotificationDelivery | channel, recipient, result, retry |
 
-Un Job référence la révision réellement exécutée. Une modification de politique ne réécrit pas l'historique. Une tentative en échec et son retry restent distincts.
+A Job references the revision actually executed. Policy changes do not rewrite history. A failed attempt and its retry remain separate.
 
-## États d'exécution
+## Execution states
 
 ```text
 scheduled -> queued -> claimed -> running
@@ -56,12 +56,12 @@ scheduled -> queued -> claimed -> running
                                    -> canceled
 ```
 
-`skipped` désigne une occurrence volontairement ignorée, avec motif. Les transitions autorisées et leurs préconditions devront être validées par tests. Un événement tardif ne doit pas faire régresser silencieusement un état terminal.
+`skipped` denotes a deliberately ignored occurrence, with a reason. Allowed transitions and their prerequisites must be validated by tests. A late event must not silently regress a terminal state.
 
-## Observation séparée
+## Separate observation state
 
-`healthy`, `unreachable`, `suspected_stuck` et `reconciliation_required` décrivent la connaissance du serveur, pas nécessairement le résultat du processus. Un agent injoignable peut avoir terminé sa sauvegarde. Afficher le dernier état connu et son horodatage.
+`healthy`, `unreachable`, `suspected_stuck`, and `reconciliation_required` describe the server's knowledge, not necessarily the process result. An unreachable agent may already have finished its backup. Display the last known state and its timestamp.
 
-## Persistance
+## Persistence
 
-Le choix du moteur de stockage serveur reste ouvert. Exiger transactions, contraintes d'unicité, migrations, sauvegarde et restauration testées. L'agent nécessite un stockage local persistant pour l'outbox et les tentatives. SQLite est une option à évaluer, pas un choix acté.
+The server storage engine remains undecided. Require transactions, uniqueness constraints, migrations, and tested backup and restore procedures. The agent needs persistent local storage for its outbox and attempts. SQLite is an option to evaluate, not an accepted choice.

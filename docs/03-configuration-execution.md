@@ -1,14 +1,14 @@
-# Configuration et exécution
+# Configuration and execution
 
-Statut : schéma conceptuel proposé, pas une configuration utilisable.
+Status: proposed conceptual schema, not a usable configuration.
 
-## Séparation des configurations
+## Configuration separation
 
-Configuration agent : identité, endpoint du serveur, authentification, chemins de stockage local, binaire Restic, limites locales.
+Agent configuration: identity, server endpoint, authentication, local storage paths, Restic binary, and local limits.
 
-Politique de sauvegarde : sources, exclusions, dépôts, planification centrale, contraintes, délais et rétention éventuelle. Le serveur stocke des références de secrets ; la résolution locale est privilégiée.
+Backup policy: sources, exclusions, repositories, central schedule, constraints, time limits, and optional retention. The server stores secret references; local resolution is preferred.
 
-## Exemple indicatif
+## Illustrative example
 
 ```yaml
 schema_version: 1
@@ -41,59 +41,59 @@ schedule:
   catch_up: latest_only
 ```
 
-Les champs et valeurs sont provisoires. Les délais de l'exemple ne constituent pas des valeurs adaptées à tous les environnements. La grammaire cron, les exclusions et leur traduction vers Restic doivent être spécifiées puis testées.
+Fields and values are provisional. The example's time limits are not suitable defaults for every environment. Cron syntax, exclusions, and their translation into Restic arguments must be specified and tested.
 
-## Préconditions
+## Prerequisites
 
-Vérifier chemins requis, permissions et montages attendus ; ne pas sauvegarder silencieusement un répertoire vide remplaçant un volume absent. Définir le comportement pour chaque source optionnelle ou obligatoire.
+Check required paths, permissions, and expected mounts; do not silently back up an empty directory standing in for a missing volume. Define behavior for each optional or required source.
 
-Définir si la sauvegarde doit rester sur un filesystem et comment traiter les liens symboliques. Pour les données applicatives, prévoir dumps ou snapshots cohérents. Des fichiers en cours de modification ne garantissent pas la cohérence d'une base de données.
+Define whether backups stay within one filesystem and how symbolic links are handled. For application data, plan consistent dumps or snapshots. Files being modified do not guarantee database consistency.
 
-Les hooks futurs devront avoir une liste d'autorisation, un environnement limité, un timeout, un traitement des erreurs et une règle de nettoyage même en cas d'échec. Ils sont hors MVP.
+Future hooks must have an allowlist, restricted environment, timeout, error handling, and cleanup rules even after failure. They are outside the MVP.
 
-## Destinations multiples
+## Multiple destinations
 
-Stratégie indépendante : lancer un backup par dépôt. Orientation MVP : destinations séquentielles ; les lectures successives peuvent observer des données différentes.
+Independent strategy: run a backup for each repository. MVP direction: sequential destinations; successive reads may observe different data.
 
-Stratégie backup puis copy : créer un snapshot primaire puis le copier vers les dépôts secondaires. Cette évolution doit gérer séparément échec primaire, réplication, authentification des deux dépôts et identification des snapshots. Ne pas supposer des identifiants identiques entre dépôts.
+Backup-then-copy strategy: create a primary snapshot and copy it to secondary repositories. This extension must separately handle primary failure, replication, authentication for both repositories, and snapshot identification. Do not assume identical snapshot IDs across repositories.
 
-Le job réussit si toutes ses destinations obligatoires réussissent complètement. Une destination facultative en échec reste visible et peut produire un incident sans transformer automatiquement le job en échec. Si une destination obligatoire est incomplète, le résultat global ne peut pas être succeeded. La table d'agrégation exhaustive reste à formaliser.
+The job succeeds if every required destination succeeds completely. An optional destination failure remains visible and may open an incident without automatically making the job fail. If a required destination is incomplete, the overall result cannot be succeeded. The exhaustive aggregation table remains to be formalized.
 
-Un retry vise uniquement les opérations nécessaires, conserve la traçabilité et doit tenir compte du fait qu'un nouvel essai peut produire un nouveau snapshot.
+Retries target only necessary operations, preserve traceability, and account for the possibility that another attempt creates a new snapshot.
 
-## Exécution Restic
+## Running Restic
 
-Lancer le processus avec arguments structurés et environnement contrôlé, sans concaténation shell. Collecter stdout JSON et stderr séparément. Préserver code de sortie, version Restic et résumé final.
+Start the process with structured arguments and a controlled environment, without shell-command concatenation. Collect JSON stdout and stderr separately. Preserve the exit code, Restic version, and final summary.
 
-Pour backup, distinguer notamment réussite complète et snapshot incomplet : le code 3 ne doit pas être assimilé à une réussite complète. La table de codes et les champs JSON doivent être vérifiés contre chaque version de Restic supportée. Ne pas appliquer indistinctement les règles de backup à check, copy ou prune.
+For backup, distinguish complete success from an incomplete snapshot: exit code 3 must not be treated as complete success. Exit-code mappings and JSON fields must be checked against every supported Restic version. Do not apply backup rules indiscriminately to check, copy, or prune.
 
-Les erreurs de parsing sont explicites ; ne pas inventer de métriques absentes.
+Parsing errors are explicit; do not invent missing metrics.
 
-## Délais
+## Time limits
 
-- start_deadline : retard maximal avant démarrage.
-- max_runtime : durée totale autorisée.
-- heartbeat_timeout : absence de contact agent.
-- progress_timeout : absence de progression, détection facultative.
-- termination_grace_period : délai entre arrêt gracieux et escalade.
+- start_deadline: maximum delay before starting.
+- max_runtime: maximum total runtime.
+- heartbeat_timeout: time without agent contact.
+- progress_timeout: time without progress; optional detection.
+- termination_grace_period: time between graceful termination and escalation.
 
-Par défaut proposé, un dépassement signale une anomalie et nécessite une vérification ; il ne tue pas automatiquement Restic. L'arrêt automatique est une option distincte. L'absence de progression n'est pas une preuve suffisante de blocage.
+Proposed default: exceeding a limit flags an anomaly and requires inspection; it does not automatically kill Restic. Automatic termination is a separate option. Lack of progress alone is not sufficient evidence of a stuck process.
 
-## Verrouillage et reprise
+## Locking and recovery
 
-Un verrou système local couvre toutes les sauvegardes de l'agent et les commandes locales passant par le même gestionnaire. Les invocations Restic externes ne sont pas implicitement couvertes.
+A local OS-level lock covers all agent backups and local commands using the same execution manager. External Restic invocations are not implicitly covered.
 
-Le serveur réserve les jobs ; les opérations de maintenance sont coordonnées par dépôt. Les verrous natifs Restic sont conservés. Aucun unlock automatique à partir d'un simple timeout.
+The server reserves jobs; maintenance operations are coordinated per repository. Native Restic locks are preserved. No automatic unlock based on a timeout alone.
 
-Après redémarrage, inspecter les tentatives persistées et le processus éventuellement encore vivant. Un PID seul ne suffit pas à identifier un ancien processus. Ne pas relancer tant que l'exécution précédente reste incertaine.
+After restart, inspect persisted attempts and any process still running. A PID alone is insufficient to identify an old process. Do not retry while the previous execution remains uncertain.
 
 ## Maintenance
 
-Prévoir ultérieurement des jobs distincts pour forget, prune, check, copy et tests de restauration. La suppression de snapshots et la maintenance destructive nécessitent droits et protections spécifiques.
+Plan separate future jobs for forget, prune, check, copy, and restore tests. Snapshot deletion and destructive maintenance require specific permissions and safeguards.
 
-Références de validation :
+Validation references:
 - https://restic.readthedocs.io/en/stable/040_backup.html
 - https://restic.readthedocs.io/en/stable/075_scripting.html
 - https://restic.readthedocs.io/en/stable/045_working_with_repos.html
 
-Ces liens sont des références à vérifier pendant l'implémentation ; aucune compatibilité de version n'est annoncée ici.
+These links are references to verify during implementation; no version compatibility is claimed here.

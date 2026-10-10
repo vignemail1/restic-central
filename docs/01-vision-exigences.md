@@ -1,43 +1,43 @@
-# Vision et exigences
+# Vision and requirements
 
-Statut : conception uniquement, non prêt pour la production.
+Status: design only, not production ready.
 
-## Problème traité
+## Problem addressed
 
-Centraliser le pilotage et l'observation de sauvegardes Restic de plusieurs clients, sans centraliser nécessairement les données ni les secrets des dépôts. Une réussite du processus ne constitue pas, à elle seule, une preuve de restaurabilité applicative.
+Centralize the orchestration and observation of Restic backups across multiple clients without necessarily centralizing backup data or repository secrets. Successful process execution alone does not prove application-level recoverability.
 
-## Exigences exprimées
+## Expressed requirements
 
-- Un client reçoit une configuration, lance Restic et remonte le résultat par API REST.
-- Le serveur gère les remontées, planifie les déclenchements et affiche les résultats.
-- Plusieurs repositories sont possibles ; chaque destination décrit son type, ses paramètres et ses credentials.
-- La politique contient les sources à inclure et les exclusions.
-- Le client dispose d'un endpoint de remontée d'état et de credentials d'accès.
-- Un verrou client interdit deux sauvegardes simultanées.
-- Une durée limite permet de signaler un job potentiellement bloqué et nécessitant une vérification manuelle.
-- Les erreurs sont notifiées par email, Matrix, Slack ou autres providers.
-- La fenêtre de synthèse des erreurs est de 24 heures par défaut et configurable.
-- La fenêtre de rapport est de 7 jours par défaut et configurable ; durée et volumétrie y figurent.
-- README et documentation doivent afficher clairement le statut de projet en conception.
+- A client receives a configuration, runs Restic, and reports the result through a REST API.
+- The server handles reports, schedules execution, and displays results.
+- Multiple repositories are supported; each destination describes its type, parameters, and credentials.
+- The policy contains included sources and exclusions.
+- The client has a reporting endpoint and access credentials.
+- A client-side lock prevents two simultaneous backups.
+- A time limit identifies a potentially stuck job requiring manual inspection.
+- Errors are notified through email, Matrix, Slack, or other providers.
+- The error-summary window defaults to 24 hours and is configurable.
+- The reporting window defaults to 7 days and is configurable; it includes duration and data-volume metrics.
+- The README and documentation must clearly display the project's design-phase status.
 
-## Objectifs complémentaires proposés
+## Proposed additional goals
 
-Détecter aussi les tâches jamais démarrées ; survivre à une indisponibilité temporaire de l'API ; différencier backup incomplet et erreur fatale ; tracer les révisions de configuration ; protéger les secrets ; tester les restaurations.
+Detect tasks that never start; survive temporary API unavailability; distinguish incomplete backups from fatal errors; track configuration revisions; protect secrets; test restores.
 
-## Terminologie
+## Terminology
 
-- Agent : service local chargé de l'exécution.
-- Politique : définition versionnée d'une sauvegarde.
-- Job : occurrence logique d'une politique, prévue ou manuelle.
-- Tentative : essai d'exécution d'un job.
-- Destination : dépôt ciblé par une opération.
-- Incident : anomalie suivie dans le temps, distincte d'une notification.
-- RPO : objectif maximal d'ancienneté des données récupérables.
+- Agent: the local service responsible for execution.
+- Policy: a versioned backup definition.
+- Job: a logical occurrence of a policy, scheduled or manual.
+- Attempt: one execution attempt for a job.
+- Destination: the repository targeted by an operation.
+- Incident: a problem tracked over time, distinct from a notification.
+- RPO: the target maximum age of recoverable data.
 
-## Limites initiales proposées
+## Proposed initial boundaries
 
-Pas de restauration distante automatique, pas de haute disponibilité du scheduler, pas de multi-tenancy complet, pas d'exécution arbitraire de commandes distribuées. Les intégrations de cohérence applicative restent à spécifier avant activation.
+No automatic remote restoration, no highly available scheduler, no full multi-tenancy, and no arbitrary distributed command execution. Application-consistency integrations must be specified before activation.
 
-## Questions de dimensionnement
+## Sizing questions
 
-À renseigner avant implémentation : nombre d'agents et de politiques, destinations par politique, fréquence des événements, taille des logs, historique conservé, débit API, indisponibilité acceptable et objectifs de restauration du service central. Aucun engagement de performance n'est établi.
+To define before implementation: agent and policy counts, destinations per policy, event frequency, log size, retained history, API throughput, acceptable downtime, and recovery objectives for the central service. No performance commitment has been established.

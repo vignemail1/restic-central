@@ -1,54 +1,54 @@
-# Contrat REST et fiabilité
+# REST contract and reliability
 
-Statut : contrat indicatif non implémenté. Les chemins ci-dessous ne constituent pas une API stable.
+Status: illustrative, unimplemented contract. The paths below do not constitute a stable API.
 
-## Transport et identité
+## Transport and identity
 
-HTTPS avec validation des certificats. Communications initiées par l'agent ; polling ou long polling proposé. Chaque agent est authentifié et autorisé uniquement sur ses ressources. Les identifiants envoyés dans le corps ne remplacent jamais l'identité authentifiée.
+HTTPS with certificate verification. Agent-initiated communication; polling or long polling is proposed. Each agent is authenticated and authorized only for its own resources. IDs submitted in request bodies never replace the authenticated identity.
 
-## Ressources envisagées
+## Proposed resources
 
-| Méthode et chemin | Usage |
+| Method and path | Purpose |
 |---|---|
-| POST /api/v1/agents/enroll | enrôlement contrôlé, mécanisme à définir |
-| POST /api/v1/agents/{id}/heartbeat | disponibilité et capacités |
-| GET /api/v1/agents/{id}/configuration | révision autorisée de configuration |
-| POST /api/v1/agents/{id}/jobs/claim | acquisition atomique d'un job |
-| POST /api/v1/attempts/{id}/renew | renouvellement de réservation |
-| POST /api/v1/attempts/{id}/events | lot d'événements idempotents |
-| POST /api/v1/attempts/{id}/result | résultat terminal idempotent |
-| POST /api/v1/policies/{id}/jobs | demande manuelle, accès administrateur |
-| GET /api/v1/jobs/{id} | état et résultats par destination |
-| GET /api/v1/reports/backups | rapport filtré et paginé |
+| POST /api/v1/agents/enroll | controlled enrollment; mechanism to define |
+| POST /api/v1/agents/{id}/heartbeat | availability and capabilities |
+| GET /api/v1/agents/{id}/configuration | authorized configuration revision |
+| POST /api/v1/agents/{id}/jobs/claim | atomic job acquisition |
+| POST /api/v1/attempts/{id}/renew | reservation renewal |
+| POST /api/v1/attempts/{id}/events | idempotent event batch |
+| POST /api/v1/attempts/{id}/result | idempotent terminal result |
+| POST /api/v1/policies/{id}/jobs | manual request, administrator access |
+| GET /api/v1/jobs/{id} | state and per-destination results |
+| GET /api/v1/reports/backups | filtered, paginated report |
 
-Prévoir pagination, limites de corps, validation stricte, erreurs structurées, identifiants de corrélation et versionnement. Les endpoints d'administration et d'agent ont des autorisations distinctes.
+Provide pagination, request-size limits, strict validation, structured errors, correlation IDs, and versioning. Administration and agent endpoints have separate permissions.
 
-## Enveloppe événement
+## Event envelope
 
-Champs minimaux : event_id, agent_id, job_id, attempt_id, config_revision, sequence_number, occurred_at, event_type, payload. Le serveur ajoute received_at. Dates transportées en UTC ; conserver les deux dates pour diagnostiquer retard et désynchronisation.
+Minimum fields: event_id, agent_id, job_id, attempt_id, config_revision, sequence_number, occurred_at, event_type, payload. The server adds received_at. Timestamps are transmitted in UTC; retain both dates to diagnose delays and clock differences.
 
-Le serveur déduplique par event_id, contrôle l'appartenance de la tentative et détecte les séquences manquantes ou hors ordre. Un doublon identique est acquitté sans nouvel effet ; le même identifiant avec contenu différent est rejeté.
+The server deduplicates by event_id, checks attempt ownership, and detects missing or out-of-order sequences. An identical duplicate is acknowledged without another side effect; the same ID with different content is rejected.
 
-## Outbox locale
+## Local outbox
 
-Persister avant envoi. Acquitter seulement après confirmation de persistance serveur. Garantir une livraison au moins une fois, pas une promesse de livraison exactement une fois.
+Persist before sending. Acknowledge only after confirmation of server-side persistence. Provide at-least-once delivery, not a promise of exactly-once delivery.
 
-Retries avec backoff, jitter, limite et traitement des erreurs : 429 et erreurs temporaires peuvent être réessayés ; erreurs d'authentification déclenchent un état dégradé et ne produisent pas une boucle agressive. Respecter Retry-After lorsqu'applicable.
+Retries use backoff, jitter, bounds, and error classification: 429 and temporary errors may be retried; authentication errors trigger a degraded state instead of an aggressive loop. Honor Retry-After where applicable.
 
-Configurer quota local, rétention, reprise après crash et politique de saturation. Les événements terminaux ont priorité ; les progressions peuvent être regroupées. L'absence d'espace pour persister doit produire une erreur visible, pas une perte silencieuse.
+Configure local quota, retention, crash recovery, and saturation policy. Terminal events take priority; progress updates may be coalesced. Insufficient space to persist must cause a visible error, not silent data loss.
 
-Un résultat en attente d'envoi n'autorise jamais le redémarrage automatique de la sauvegarde terminée.
+A result awaiting transmission never authorizes automatically restarting the completed backup.
 
-## Réservations et concurrence
+## Reservations and concurrency
 
-L'acquisition est transactionnelle. Une tentative reçoit un identifiant et une réservation renouvelable. Le serveur refuse les mises à jour provenant d'une tentative non autorisée.
+Acquisition is transactional. An attempt receives an ID and a renewable reservation. The server rejects updates from unauthorized attempts.
 
-L'expiration d'une réservation n'établit pas l'arrêt de Restic. Ne pas redistribuer automatiquement un job potentiellement actif à un autre agent. Réconciliation nécessaire avant relance ; une protection de fencing des écritures de métadonnées ne suffit pas à arrêter un processus qui écrit dans un dépôt.
+Reservation expiry does not prove Restic has stopped. Do not automatically redistribute a potentially active job to another agent. Reconciliation is required before retrying; fencing metadata writes alone cannot stop a process writing to a repository.
 
-## Réconciliation
+## Reconciliation
 
-Au reconnect, l'agent transmet ses tentatives actives et ses résultats persistés. Le serveur répond avec son état autoritatif de coordination et les événements attendus. Les divergences sont tracées. Un résultat tardif peut résoudre un état d'observation inconnu selon des règles explicites, sans effacer l'incident historique.
+On reconnect, the agent sends active attempts and persisted results. The server replies with its authoritative coordination state and expected events. Divergences are recorded. A late result may resolve an unknown observation state under explicit rules without erasing the historical incident.
 
-## Annulation
+## Cancellation
 
-Distinguer demande d'annulation, réception agent et arrêt confirmé. Une API ne doit pas annoncer canceled uniquement parce qu'une demande a été enregistrée. Le traitement du groupe de processus et du délai de grâce dépendra du système supporté.
+Distinguish cancellation request, agent receipt, and confirmed termination. An API must not report canceled merely because a request was recorded. Process-group handling and grace periods depend on the supported operating system.

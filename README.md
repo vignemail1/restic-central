@@ -1,40 +1,40 @@
 # restic-central
 
-> STATUT : IDÉE DE PROJET / CONCEPTION — NON PRÊT POUR LA PRODUCTION.
-> Aucun agent, serveur ou interface opérationnelle n'est fourni. Les fonctionnalités décrites sont des objectifs non implémentés et non validés. Ne pas utiliser ce projet pour protéger des données réelles.
+> STATUS: PROJECT IDEA / DESIGN PHASE — NOT PRODUCTION READY.
+> No operational agent, server, or interface is provided. The features described are unimplemented and unvalidated goals. Do not use this project to protect real data.
 
-## Objectif
+## Purpose
 
-Concevoir un orchestrateur de sauvegardes Restic multi-machines : agents et serveur en Go, binaires statiques et multi-OS, API REST, supervision et interface web opérateur. Restic reste le moteur ; le serveur central n'est pas le stockage des sauvegardes.
+Design a multi-machine Restic backup orchestrator: Go agents and server, static multi-OS binaries, REST API, monitoring, and an operator web interface. Restic remains the backup engine; the central server is not the backup storage.
 
-## Fonctionnalités spécifiées
+## Specified features
 
-- Plusieurs profils par machine, avec filesets include/exclude distincts.
-- Intervalles de sauvegarde ancrés sur un timestamp stable, 24 h par défaut.
-- Désactivation et suspension au niveau machine ou profil.
-- Pre-hooks et post-hooks configurables, notamment préparation et nettoyage de fichiers temporaires.
-- Backup vers un dépôt primaire puis réplication par restic copy.
-- Lancement manuel local par un opérateur, avec le même verrou et les mêmes remontées.
-- API HTTPS avec token individuel ; mTLS optionnel ; vérification du certificat configurable.
-- Notifications multicanaux, synthèse 24 h et rapports 7 jours configurables.
-- Interface web, authentification OpenLDAP possible et rôles applicatifs.
-- Export cohérent local du serveur, planifié ou déclenché par interface/CLI, pour sauvegarde par un processus externe.
-- Objectif de conservation : un an de jobs pour 300 machines, à qualifier par tests.
+- Multiple profiles per machine, with separate include/exclude filesets.
+- Backup intervals anchored to a stable timestamp, defaulting to 24 hours.
+- Disabling and suspension at machine or profile level.
+- Configurable pre-hooks and post-hooks, including file preparation and temporary-data cleanup.
+- Backup to a primary repository followed by replication using restic copy.
+- Operator-triggered local execution, with the same locking and reporting mechanisms.
+- HTTPS API with individual tokens; optional mTLS; configurable certificate verification.
+- Multi-channel notifications, configurable 24-hour summaries and 7-day reports.
+- Web interface, support for OpenLDAP authentication, and application roles.
+- Consistent local server exports, scheduled or triggered through the web interface/CLI, for backup by an external process.
+- Retention target: one year of jobs for 300 machines, subject to testing.
 
-## Documentation et ordre de lecture
+## Documentation and reading order
 
-La [révision des spécifications](docs/09-specifications-revisees.md) fait autorité sur les points modifiés. Les documents 01 à 08 conservent la conception initiale ; leurs dispositions contradictoires sont remplacées par cette révision, notamment cron, exclusion des hooks, backups indépendants et ciblage Linux seul.
+The [revised specifications](docs/09-specifications-revisees.md) take precedence on the topics they modify. Documents 01 through 08 retain the initial design; conflicting provisions are superseded by this revision, particularly cron scheduling, the exclusion of hooks, independent backups, and Linux-only targeting.
 
-1. [Spécifications révisées — document prioritaire](docs/09-specifications-revisees.md)
-2. [Registre actualisé des décisions](docs/07-decisions.md)
-3. [Vision initiale](docs/01-vision-exigences.md)
-4. [Architecture initiale](docs/02-architecture-modele.md)
-5. [Configuration et exécution initiales](docs/03-configuration-execution.md)
-6. [API et fiabilité](docs/04-api-fiabilite.md)
-7. [Sécurité et exploitation initiales](docs/05-securite-exploitation.md)
-8. [Notifications et rapports](docs/06-notifications-rapports.md)
-9. [Roadmap initiale](docs/08-roadmap-validation.md)
+1. [Revised specifications — priority document](docs/09-specifications-revisees.md)
+2. [Updated decision register](docs/07-decisions.md)
+3. [Initial vision](docs/01-vision-exigences.md)
+4. [Initial architecture](docs/02-architecture-modele.md)
+5. [Initial configuration and execution](docs/03-configuration-execution.md)
+6. [API and reliability](docs/04-api-fiabilite.md)
+7. [Initial security and operations](docs/05-securite-exploitation.md)
+8. [Notifications and reports](docs/06-notifications-rapports.md)
+9. [Initial roadmap](docs/08-roadmap-validation.md)
 
-## Maturité
+## Maturity
 
-Les décisions acceptées sont des engagements de conception, pas des fonctionnalités livrées. Les noms de commandes, champs et endpoints restent indicatifs. Aucun résultat de tests, lint, benchmark ou audit n'est revendiqué. La licence, les versions supportées et les modalités de distribution restent à définir.
+Accepted decisions are design commitments, not delivered features. Command names, fields, and endpoints remain illustrative. No test, lint, benchmark, or audit results are claimed. The license, supported versions, and distribution arrangements remain to be defined.
