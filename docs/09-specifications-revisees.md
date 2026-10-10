@@ -1,131 +1,131 @@
-# Spécifications révisées
+# Revised specifications
 
-Révision : 2026-10-10. Statut : conception uniquement, NON PRÊT POUR LA PRODUCTION.
+Revision: 2026-10-10. Status: design only, NOT PRODUCTION READY.
 
-Ce document complète la conception initiale et fait autorité en cas de contradiction sur les sujets ci-dessous. Aucun comportement n'est implémenté. Les exigences viennent du porteur du projet ; les précisions marquées PROPOSITION restent à valider.
+This document supplements the initial design and takes precedence where the topics below conflict. No behavior is implemented. Requirements come from the project owner; details marked PROPOSAL remain subject to validation.
 
-## 1. Profils et filesets
+## 1. Profiles and filesets
 
-Une machine possède plusieurs profils de sauvegarde. Chaque profil a un identifiant stable, sa configuration versionnée, son fileset include/exclude, ses destinations, hooks, intervalle et règles de rétention.
+A machine has multiple backup profiles. Each profile has a stable identifier, versioned configuration, include/exclude fileset, destinations, hooks, interval, and retention rules.
 
-Le modèle devient Agent -> BackupProfile -> ConfigRevision -> Job -> Attempt -> DestinationResult. BackupProfile précise la notion initiale BackupPolicy ; la mutualisation de modèles de politique reste possible sans confondre profil exécuté et modèle partagé.
+The model becomes Agent -> BackupProfile -> ConfigRevision -> Job -> Attempt -> DestinationResult. BackupProfile refines the initial BackupPolicy concept; shared policy templates remain possible without confusing an executed profile with a shared template.
 
-Chaque événement et rapport identifie machine et profil. Le verrou exigé reste global à la machine : deux profils ne doivent pas exécuter simultanément leurs sauvegardes via l'agent. Un chevauchement est mis en attente ou signalé selon une politique à définir, jamais ignoré silencieusement.
+Every event and report identifies machine and profile. The required lock remains machine-wide: two profiles must not execute backups simultaneously through the agent. Overlapping work is queued or reported according to a policy yet to be defined, never silently ignored.
 
-## 2. Activation, suspension et maintenance
+## 2. Activation, suspension, and maintenance
 
-La programmation d'une machine ou d'un profil peut être désactivée ou suspendue.
+A machine or profile schedule can be disabled or suspended.
 
-PROPOSITION : disabled est un arrêt sans échéance de reprise ; suspended est une suspension avec début, fin optionnelle, motif et auteur. Une suspension machine s'applique à tous ses profils. Un profil activé ne contourne pas une désactivation machine.
+PROPOSAL: disabled means stopped without a resumption deadline; suspended means a suspension with start, optional end, reason, and author. Machine suspension applies to all profiles. An enabled profile cannot bypass a disabled machine.
 
-Le scheduler ne déclenche pas les occurrences comprises dans l'arrêt prévu. Le reporting distingue maintenance planifiée, exécution manquée et échec. Les alertes d'absence attendue de la machine doivent tenir compte de sa maintenance sans masquer les erreurs réellement survenues.
+The scheduler does not trigger occurrences within planned downtime. Reporting distinguishes planned maintenance, missed execution, and failure. Expected machine-absence alerts must account for maintenance without masking errors that actually occurred.
 
-PROPOSITION : une suspension ne tue pas un job déjà actif. Les jobs en file sont revérifiés avant démarrage et leurs reports/annulations sont audités. Un lancement manuel pendant suspension demande un override explicite tracé. Ces règles doivent être validées avant implémentation.
+PROPOSAL: suspension does not kill an already active job. Queued jobs are rechecked before starting; postponements/cancellations are audited. Manual execution during suspension requires an explicit audited override. Validate these rules before implementation.
 
-## 3. Intervalles et timestamps
+## 3. Intervals and timestamps
 
-La programmation automatique utilise un intervalle par client/profil, 24 h par défaut, et une ancre timestamp stable. La configuration client peut fournir l'intervalle par défaut ; un profil peut le surcharger.
+Automatic scheduling uses a per-client/profile interval, defaulting to 24 hours, and a stable timestamp anchor. Client configuration may provide a default interval; a profile may override it.
 
-Les occurrences nominales sont anchor_timestamp + n * interval_seconds. Elles ne sont pas calculées depuis la fin du dernier backup, afin d'éviter la dérive. Identité d'occurrence : agent, profil, révision de programmation et timestamp nominal.
+Nominal occurrences are anchor_timestamp + n * interval_seconds. They are not calculated from the previous backup's finish time, avoiding drift. Occurrence identity: agent, profile, scheduling revision, and nominal timestamp.
 
-PROPOSITION : timestamps Unix UTC en secondes pour les échéances, dates d'événements avec précision documentée ; durées mesurées avec une horloge monotone locale. Le serveur conserve timestamp nominal, démarrage, fin et réception séparément.
+PROPOSAL: UTC Unix timestamps in seconds for scheduled times, documented event-time precision, and local monotonic-clock duration measurement. The server separately retains nominal, start, finish, and receipt times.
 
-Les rapports convertissent les timestamps en datetime avec TZ explicitement affichée. L'intervalle de 24 h est une durée, pas une promesse de même heure locale lors d'un changement d'heure. Les programmations cron et leur exemple initial sont remplacés par ce modèle d'intervalle.
+Reports convert timestamps into datetime with explicitly displayed TZ. A 24-hour interval is a duration, not a promise of the same local time across daylight-saving changes. Cron schedules and the initial example are superseded by this interval model.
 
-Rattrapage après panne, jitter, retard maximal et comportement lors d'une modification d'ancre restent à spécifier. PROPOSITION : au plus une occurrence rattrapée, sans rejouer toute l'accumulation. Un lancement manuel ne modifie pas l'ancre.
+Catch-up after downtime, jitter, maximum delay, and anchor-change behavior remain to be specified. PROPOSAL: catch up at most one occurrence instead of replaying an entire backlog. Manual execution does not change the anchor.
 
-## 4. Pre-hooks et post-hooks
+## 4. Pre-hooks and post-hooks
 
-Les configurations permettent des commandes avant/après le lancement de Restic : dump de bases, préparation de fichiers, nettoyage temporaire ou autres actions. Les hooks font partie du périmètre ; leur exclusion initiale est remplacée.
+Configurations support commands before/after Restic execution: database dumps, file preparation, temporary-data cleanup, or other actions. Hooks are in scope; their initial exclusion is superseded.
 
-PROPOSITION de contrat : commandes sous forme executable + args, sans shell implicite ; liste ordonnée, répertoire de travail, références d'environnement/secret, timeout et condition d'exécution. Un shell explicite éventuel doit être autorisé localement et audité.
+PROPOSED contract: executable + args, no implicit shell; ordered list, working directory, environment/secret references, timeout, and execution condition. Any explicit shell must be locally authorized and audited.
 
-Séquence recommandée : verrou machine -> préconditions -> pre-hooks -> backup primaire -> copies -> post-hooks -> persistance du résultat -> libération du verrou. Les copies consomment le snapshot, pas les fichiers préparés.
+Recommended sequence: machine lock -> prerequisites -> pre-hooks -> primary backup -> copies -> post-hooks -> result persistence -> lock release. Copies consume the snapshot, not the prepared source files.
 
-PROPOSITION : un pre-hook requis en échec empêche le backup ; le post-hook de nettoyage est tenté même en cas d'erreur précédente, s'il est configuré pour cela. Les échecs de hooks sont conservés séparément du résultat Restic. Un échec de nettoyage peut rendre le job dégradé sans effacer un snapshot réussi.
+PROPOSAL: a failed required pre-hook prevents backup; a cleanup post-hook is attempted even after an earlier failure if configured accordingly. Hook failures are retained separately from Restic results. Cleanup failure may degrade a job without invalidating a successful snapshot.
 
-La portée exacte before/after par étape, les conditions always/on_success/on_failure et la table d'agrégation restent à ratifier. L'annulation ou le crash ne garantit pas l'exécution d'un cleanup : documenter une reprise et un nettoyage manuel. Le délai global inclut les hooks ; chaque hook a aussi son délai propre.
+Exact per-step before/after scope, always/on_success/on_failure conditions, and aggregation rules still need ratification. Cancellation or crash does not guarantee cleanup: document recovery and manual cleanup. The overall limit includes hooks; each hook also has its own limit.
 
-La cohérence applicative est hors scope : l'opérateur est responsable de préparer des fichiers cohérents via le pre-hook. Le produit orchestre et rapporte ; il ne certifie pas la cohérence d'une base de données.
+Application consistency is outside scope: the operator is responsible for preparing consistent files through pre-hooks. The product orchestrates and reports; it does not certify database consistency.
 
-## 5. Backup primaire et réplication
+## 5. Primary backup and replication
 
-Un profil définit un repository primaire puis des destinations de réplication. Après le backup, utiliser restic copy sur le snapshot précisément identifié pour cette tentative, jamais une sélection ambiguë de type latest partagée entre profils.
+A profile defines a primary repository and replication destinations. After backup, use restic copy on the snapshot specifically identified for that attempt, never an ambiguous latest selection shared across profiles.
 
-Conserver le snapshot primaire et la correspondance des snapshots copiés par destination ; ne pas supposer des IDs identiques. L'agent dispose des droits et références de secrets nécessaires aux deux dépôts de chaque copy.
+Retain the primary snapshot and mappings to copied snapshots per destination; do not assume identical IDs. The agent has the permissions and secret references needed for both repositories involved in each copy.
 
-Une erreur de réplication est distincte d'une erreur du backup primaire. Les retries de copies réutilisent le snapshot source encore disponible ; ne pas refaire le backup pour la seule perte d'un accusé API ou l'échec d'une copy.
+Replication failure is distinct from primary-backup failure. Copy retries reuse the source snapshot while available; do not repeat backup solely because an API acknowledgment was lost or a copy failed.
 
-La concurrence des copies et la règle globale de succès restent ouvertes. PROPOSITION : seules les copies requises influencent le succès complet ; snapshots incomplets non répliqués par défaut sans choix explicite. Les copies, leur durée et leur volumétrie restent visibles individuellement.
+Copy concurrency and overall success rules remain open. PROPOSAL: only required copies affect complete success; incomplete snapshots are not replicated by default without an explicit choice. Copies, duration, and volume remain individually visible.
 
-## 6. Rétention côté client
+## 6. Client-side retention
 
-La rétention des snapshots est définie dans la configuration client, avec paramètres par profil/dépôt si nécessaire. Le format et les valeurs par défaut restent ouverts.
+Snapshot retention is defined in client configuration, with per-profile/repository parameters where needed. Format and defaults remain open.
 
-Définir les sélections par machine/profil pour éviter qu'un forget touche les snapshots d'un autre profil sur un dépôt partagé. Préciser politiques du primaire et des réplicas, fenêtres de maintenance et séparation forget/prune.
+Define machine/profile selections so forget cannot affect another profile's snapshots in a shared repository. Specify primary and replica policies, maintenance windows, and separation of forget/prune.
 
-PROPOSITION : ne pas supprimer le snapshot primaire d'une réplication requise encore en attente sans politique explicite d'expiration et incident. Les verrous et opérations de maintenance sont coordonnés. Aucune suppression destructive automatique n'est implicite dans cette spécification.
+PROPOSAL: do not delete a primary snapshot awaiting required replication without an explicit expiration policy and incident. Coordinate locks and maintenance operations. No automatic destructive deletion is implicit in this specification.
 
-## 7. Commande locale agent
+## 7. Local agent command
 
-Un opérateur local peut déclencher un profil en dehors du scheduler serveur. Exemple indicatif, non implémenté : restic-central-agent backup run --profile system.
+A local operator can trigger a profile outside server scheduling. Illustrative, unimplemented example: restic-central-agent backup run --profile system.
 
-Le lancement passe par le même moteur, le même verrou machine, les mêmes hooks, destinations, références de secrets et outbox. Il ne lance pas un Restic indépendant du service.
+Execution uses the same engine, machine lock, hooks, destinations, secret references, and outbox. It does not run Restic independently of the service.
 
-Identifier origin=local_manual, demandeur local, révision, job et tentative. Si l'API est indisponible, utiliser une configuration locale disponible et autorisée, persister le job puis réconcilier au reconnect. Les IDs et événements restent idempotents.
+Identify origin=local_manual, local requester, revision, job, and attempt. If the API is unavailable, use available authorized local configuration, persist the job, and reconcile on reconnect. IDs and events remain idempotent.
 
-PROPOSITION : communication CLI/service via IPC local avec permissions OS ; pas de port réseau entrant nécessaire. Définir comportement lorsque le service est arrêté, autorisations et override maintenance. Un lancement manuel n'est pas compté comme une échéance automatique supplémentaire.
+PROPOSAL: CLI/service communication through local IPC with OS permissions; no inbound network port required. Define behavior when the service is stopped, permissions, and maintenance overrides. Manual execution is not an additional automatic occurrence.
 
-## 8. TLS et authentification agent
+## 8. TLS and agent authentication
 
-La communication agent/serveur utilise HTTPS/TLS avec token individuel ; mTLS est optionnel. Lorsqu'activé, préciser si mTLS s'ajoute au token : PROPOSITION, conserver le token et exiger les deux contrôles.
+Agent/server communication uses HTTPS/TLS with an individual token; mTLS is optional. When enabled, clarify whether mTLS supplements the token: PROPOSAL, retain the token and require both checks.
 
-La vérification du certificat serveur peut être activée ou désactivée dans la configuration client. PROPOSITION de défaut : activée ; permettre CA personnalisée pour les infrastructures privées.
+Server-certificate verification can be enabled or disabled in client configuration. PROPOSED default: enabled; support custom CAs for private infrastructure.
 
-En mode non vérifié, la connexion reste chiffrée mais l'identité du serveur n'est pas correctement authentifiée : afficher un avertissement explicite local et central, auditer la configuration et ne jamais rétrograder automatiquement après une erreur TLS. Ce mode expose notamment le token et les configurations à une interception active.
+In unverified mode, the connection remains encrypted but server identity is not properly authenticated: display explicit local and central warnings, audit configuration, and never downgrade automatically after a TLS error. This mode exposes tokens and configurations to active interception.
 
-Les tokens sont révocables, rotatifs, propres à chaque agent, non journalisés. L'authentification des opérateurs web est distincte.
+Tokens are revocable, rotatable, agent-specific, and not logged. Web-operator authentication is separate.
 
-## 9. Go statique et multi-OS
+## 9. Static multi-OS Go binaries
 
-Agent et serveur sont des programmes Go compilés statiques et multi-OS. Définir une matrice GOOS/GOARCH et livrer un artefact par cible, pas un binaire universel. Aucun support OS précis ni build validé n'est revendiqué à ce stade.
+Agent and server are statically compiled multi-OS Go programs. Define a GOOS/GOARCH matrix and deliver an artifact per target, not a universal binary. No particular OS support or validated build is claimed at this stage.
 
-PROPOSITION : privilégier dépendances pure Go et CGO désactivé quand compatible ; vérifier effectivement l'absence de dépendances dynamiques selon la plateforme. Les dépendances DB, LDAP, TLS et IPC devront respecter cet objectif.
+PROPOSAL: prefer pure-Go dependencies and disable CGO where compatible; actually verify the absence of dynamic dependencies on each platform. DB, LDAP, TLS, and IPC dependencies must satisfy this objective.
 
-Restic reste un exécutable distinct dont l'installation/version/validation doit être définie. Statique ne signifie pas autosuffisant : configuration, certificats, données et intégrations externes restent nécessaires. Les tests de verrous, processus, chemins et services sont propres à chaque OS supporté.
+Restic remains a separate executable whose installation, version, and validation must be defined. Static does not mean self-sufficient: configuration, certificates, data, and external integrations remain necessary. Locking, process, path, and service tests are specific to each supported OS.
 
-## 10. Interface web et OpenLDAP
+## 10. Web interface and OpenLDAP
 
-Une interface web permet aux opérateurs de consulter état, incidents et reporting machine/profil/job, ainsi que de déclencher l'export serveur. L'authentification OpenLDAP doit être possible et les rôles sont gérés dans l'application serveur.
+A web interface lets operators inspect machine/profile/job state, incidents, and reporting, and trigger server exports. OpenLDAP authentication must be supported; roles are managed by the server application.
 
-Définir recherche d'utilisateur, bind, base DN, filtres, éventuel mapping de groupes et attribution des rôles. PROPOSITION : LDAP protégé par TLS, compte de recherche aux droits minimaux, sessions web sécurisées et contrôle d'autorisation serveur pour chaque action.
+Define user search, bind, base DN, filters, optional group mapping, and role assignment. PROPOSAL: TLS-protected LDAP, least-privilege search account, secure web sessions, and server-side authorization for every action.
 
-Ne pas assimiler connexion LDAP réussie à un rôle administrateur. Auditer suspensions, modifications, exports et actions privilégiées ; protéger les actions web contre CSRF. Gestion des comptes d'urgence et panne LDAP restent à arbitrer.
+Successful LDAP authentication does not imply administrator privileges. Audit suspensions, changes, exports, and privileged actions; protect web actions against CSRF. Emergency accounts and LDAP outages remain to be addressed.
 
-## 11. Export cohérent du serveur
+## 11. Consistent server export
 
-Le serveur planifie un export cohérent de sa configuration, de sa DB et des éléments nécessaires à la reprise dans un dossier local. Il peut aussi être déclenché par interface web ou CLI locale, exemple indicatif : restic-central-server export create.
+The server schedules a consistent export of configuration, database, and recovery material into a local directory. It can also be triggered through the web interface or local CLI; illustrative example: restic-central-server export create.
 
-La sauvegarde de ce dossier par un autre processus est hors scope. L'export n'est pas la sauvegarde des dépôts Restic.
+Backup of that directory by another process is outside scope. The export is not a backup of Restic repositories.
 
-PROPOSITION : même moteur pour trois origines, verrou d'export, snapshot transactionnel ou méthode native adaptée à la DB ; ne pas copier à chaud arbitrairement ses fichiers. Capturer une révision cohérente de configuration avec la DB.
+PROPOSAL: one engine for all three origins, an export lock, and a transactional snapshot or native method appropriate to the database; do not arbitrarily copy live database files. Capture a configuration revision consistent with the database.
 
-Écrire dans un emplacement temporaire, produire un manifeste avec version de format, date, révisions et checksums, puis publier atomiquement un export complet. Ne pas annoncer succès avant finalisation ; permissions restrictives, audit et échec visible.
+Write to a temporary location, produce a manifest with format version, timestamp, revisions, and checksums, then atomically publish a complete export. Do not announce success before finalization; use restrictive permissions, audit, and visible errors.
 
-Documenter secrets inclus/exclus et références externes nécessaires à la restauration. PROPOSITION : déclenchement planifié par intervalle ; chemin, intervalle, rétention d'exports et chiffrement à décider. Un test de restauration devra couvrir configuration, identités et jobs sans rejouer des exécutions anciennes.
+Document included/excluded secrets and external references needed for restoration. PROPOSAL: interval-based scheduling; directory, interval, export retention, and encryption remain undecided. Restore tests must cover configuration, identities, and jobs without replaying old executions.
 
-## 12. Dimensionnement et reporting
+## 12. Sizing and reporting
 
-Objectif : gérer un an de jobs pour 300 machines clientes. Plusieurs profils, copies, retries et événements peuvent multiplier le volume. Ce n'est pas une capacité mesurée.
+Target: one year of jobs for 300 client machines. Multiple profiles, copies, retries, and events may multiply data volume. This is not a measured capacity.
 
-Pour un profil quotidien par machine, base indicative : 109500 jobs sur 365 jours, hors lancements manuels. Dimensionner avec la somme des fréquences de tous les profils ; tentatives, résultats, hooks, logs et événements sont comptés séparément.
+For one daily profile per machine, illustrative baseline: 109500 jobs over 365 days, excluding manual launches. Size using the sum of all profile frequencies; count attempts, results, hooks, logs, and events separately.
 
-Fixer un jeu de charge reproductible avec profils par machine, fréquence, fan-out de copies, volume d'événements et historique. Définir ensuite objectifs de latence API/reporting, espace DB et procédure de purge. Un an de jobs ne fixe pas automatiquement la rétention des logs détaillés.
+Define a reproducible load dataset with profiles per machine, frequency, copy fan-out, event volume, and history. Then define API/reporting latency goals, database space, and purge procedures. One year of jobs does not automatically set detailed-log retention.
 
-Conserver les rapports 7 jours et synthèses 24 h par défaut, filtrables par machine/profil/destination. Afficher datetime et TZ, maintenance planifiée, origine automatique/manuelle, résultats de hooks et copies. Les tentatives ne gonflent pas le nombre de jobs ; la réplication ne constitue pas une nouvelle sauvegarde source indépendante.
+Keep default 7-day reports and 24-hour summaries, filterable by machine/profile/destination. Display datetime and TZ, planned maintenance, automatic/manual origin, hook results, and copies. Attempts do not inflate job counts; replication is not a new independent source backup.
 
-## 13. Validation et roadmap révisées
+## 13. Revised validation and roadmap
 
-Ajouter aux tests prévus : deux profils concurrents ; suspension machine prioritaire ; jobs en file suspendus ; reprise sans dérive d'ancre ; lancement manuel hors ligne ; pre-hook échoué et cleanup ; copy échouée sans nouveau backup ; rétention isolée par profil ; TLS vérifié/non vérifié/CA privée/mTLS ; token révoqué ; LDAP et rôles ; export concurrent avec écritures DB et restauration ; builds et processus sur chaque OS ; charge annuelle 300 machines.
+Add tests for concurrent profiles; machine-suspension precedence; suspended queued jobs; resumption without anchor drift; offline manual execution; failed pre-hook and cleanup; failed copy without new backup; per-profile retention isolation; verified/unverified TLS/private CA/mTLS; revoked token; LDAP and roles; export concurrent with DB writes and restoration; builds and processes on each OS; annual load for 300 machines.
 
-La roadmap initiale doit désormais inclure hooks, réplication, commande locale, rôles web et export cohérent. Leur ordre de livraison reste à décider ; leur inclusion ne signifie pas qu'ils sont disponibles.
+The initial roadmap must now include hooks, replication, local commands, web roles, and consistent exports. Delivery order remains undecided; inclusion does not mean availability.
