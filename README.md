@@ -1,41 +1,40 @@
 # restic-central
 
 > STATUT : IDÉE DE PROJET / CONCEPTION — NON PRÊT POUR LA PRODUCTION.
-> Ce dépôt documente un projet envisagé. Il ne fournit actuellement ni agent, ni serveur, ni interface opérationnelle. Aucun mécanisme de sécurité, de sauvegarde ou de restauration décrit ici n'est implémenté ou validé. Ne pas utiliser ce projet pour protéger des données réelles.
+> Aucun agent, serveur ou interface opérationnelle n'est fourni. Les fonctionnalités décrites sont des objectifs non implémentés et non validés. Ne pas utiliser ce projet pour protéger des données réelles.
 
 ## Objectif
 
-Concevoir un service central de pilotage et de supervision de sauvegardes exécutées par Restic sur plusieurs machines. Un agent local applique une configuration, exécute Restic et transmet les événements et résultats à une API REST. Le serveur planifie les jobs, suit leur état, détecte les anomalies, notifie les opérateurs et produit des rapports.
+Concevoir un orchestrateur de sauvegardes Restic multi-machines : agents et serveur en Go, binaires statiques et multi-OS, API REST, supervision et interface web opérateur. Restic reste le moteur ; le serveur central n'est pas le stockage des sauvegardes.
 
-Restic reste le moteur de sauvegarde : restic-central n'a pas vocation à réimplémenter son format de dépôt, son chiffrement ou sa déduplication. Le serveur de coordination n'est pas, par défaut, un serveur de stockage des sauvegardes.
+## Fonctionnalités spécifiées
 
-## Fonctionnalités envisagées
+- Plusieurs profils par machine, avec filesets include/exclude distincts.
+- Intervalles de sauvegarde ancrés sur un timestamp stable, 24 h par défaut.
+- Désactivation et suspension au niveau machine ou profil.
+- Pre-hooks et post-hooks configurables, notamment préparation et nettoyage de fichiers temporaires.
+- Backup vers un dépôt primaire puis réplication par restic copy.
+- Lancement manuel local par un opérateur, avec le même verrou et les mêmes remontées.
+- API HTTPS avec token individuel ; mTLS optionnel ; vérification du certificat configurable.
+- Notifications multicanaux, synthèse 24 h et rapports 7 jours configurables.
+- Interface web, authentification OpenLDAP possible et rôles applicatifs.
+- Export cohérent local du serveur, planifié ou déclenché par interface/CLI, pour sauvegarde par un processus externe.
+- Objectif de conservation : un an de jobs pour 300 machines, à qualifier par tests.
 
-- Sources et exclusions configurables ; plusieurs destinations avec résultat individuel.
-- Planification centralisée, exécution locale et verrou empêchant deux sauvegardes simultanées sur un agent.
-- Remontée REST des démarrages, progressions, réussites, résultats incomplets et erreurs.
-- Détection des échéances manquées, dépassements de durée et agents injoignables.
-- Notifications email, Matrix et Slack ; synthèse des incidents sur 24 heures par défaut.
-- Rapports sur 7 jours par défaut : durée, volumétrie, destinations et fraîcheur des sauvegardes.
-- Configurations versionnées, références de secrets, événements persistants et journal d'audit.
+## Documentation et ordre de lecture
 
-Toutes ces fonctionnalités sont des objectifs, pas des capacités disponibles.
+La [révision des spécifications](docs/09-specifications-revisees.md) fait autorité sur les points modifiés. Les documents 01 à 08 conservent la conception initiale ; leurs dispositions contradictoires sont remplacées par cette révision, notamment cron, exclusion des hooks, backups indépendants et ciblage Linux seul.
 
-## Documentation
+1. [Spécifications révisées — document prioritaire](docs/09-specifications-revisees.md)
+2. [Registre actualisé des décisions](docs/07-decisions.md)
+3. [Vision initiale](docs/01-vision-exigences.md)
+4. [Architecture initiale](docs/02-architecture-modele.md)
+5. [Configuration et exécution initiales](docs/03-configuration-execution.md)
+6. [API et fiabilité](docs/04-api-fiabilite.md)
+7. [Sécurité et exploitation initiales](docs/05-securite-exploitation.md)
+8. [Notifications et rapports](docs/06-notifications-rapports.md)
+9. [Roadmap initiale](docs/08-roadmap-validation.md)
 
-1. [Vision et exigences](docs/01-vision-exigences.md)
-2. [Architecture et modèle de données](docs/02-architecture-modele.md)
-3. [Configuration et exécution](docs/03-configuration-execution.md)
-4. [Contrat REST et fiabilité](docs/04-api-fiabilite.md)
-5. [Sécurité et exploitation](docs/05-securite-exploitation.md)
-6. [Notifications et rapports](docs/06-notifications-rapports.md)
-7. [Registre des décisions](docs/07-decisions.md)
-8. [Roadmap et stratégie de validation](docs/08-roadmap-validation.md)
+## Maturité
 
-## Statut des décisions
-
-Les exigences exprimées sont identifiées comme telles. Les orientations techniques recommandées restent PROPOSÉES tant qu'elles ne sont pas explicitement acceptées. La publication de ce document ne vaut pas approbation technique de ces orientations. Les contrats API et exemples YAML sont indicatifs et non exécutables.
-
-## Contribution
-
-À ce stade, contribuer signifie discuter les exigences, documenter les arbitrages, les risques et les critères de validation. Il n'existe pas encore de procédure d'installation, de release ni de garantie de compatibilité. Aucun choix de licence n'est acté par cette documentation.
+Les décisions acceptées sont des engagements de conception, pas des fonctionnalités livrées. Les noms de commandes, champs et endpoints restent indicatifs. Aucun résultat de tests, lint, benchmark ou audit n'est revendiqué. La licence, les versions supportées et les modalités de distribution restent à définir.
