@@ -1,49 +1,49 @@
-# Notifications et rapports
+# Notifications and reports
 
-Statut : comportement fonctionnel proposé.
+Status: proposed functional behavior.
 
 ## Incidents
 
-Catégories : backup failed, backup partial, destination failed, échéance manquée, runtime dépassé, agent injoignable, résultat inconnu et vérification en échec.
+Categories: backup failed, backup partial, destination failed, missed occurrence, runtime exceeded, unreachable agent, unknown result, and failed verification.
 
-Une absence de contact ne prouve pas un blocage du processus. La notification décrit ce qui est observé, la dernière activité connue et la vérification recommandée.
+Missing contact does not prove a stuck process. Notifications describe observations, last known activity, and recommended inspection.
 
-Regrouper par agent, politique, destination et catégorie. Conserver date d'ouverture, dernière occurrence, sévérité, acquittement et résolution. Un acquittement n'est pas une résolution. Une période de maintenance ne doit pas effacer l'historique.
+Group by agent, policy, destination, and category. Retain opening time, latest occurrence, severity, acknowledgment, and resolution. Acknowledgment is not resolution. Maintenance periods must not erase history.
 
-## Notifications immédiates
+## Immediate notifications
 
-Ouverture d'incident, escalade éventuelle et rétablissement. Définir cooldown, regroupement et suppression des doublons. Un retry réussi peut résoudre l'incident selon la règle de succès, sans effacer la tentative échouée.
+Incident opening, optional escalation, and recovery. Define cooldown, grouping, and duplicate suppression. A successful retry may resolve an incident according to the success rule without erasing the failed attempt.
 
-Providers envisagés : email, Matrix, Slack ; extension par interface commune. Un canal initial suffit au MVP, son choix reste ouvert.
+Proposed providers: email, Matrix, Slack; extensibility through a common interface. One initial channel is sufficient for the MVP; the choice remains open.
 
-Chaque livraison dispose d'un historique et d'une politique de retry. Un échec de notification ne change pas le résultat de la sauvegarde. Les messages excluent les secrets et limitent les informations sensibles.
+Each delivery has a history and retry policy. Notification failure does not change the backup result. Messages exclude secrets and limit sensitive information.
 
-## Synthèse sur 24 heures
+## 24-hour summary
 
-Fenêtre configurable, 24 heures par défaut. Présenter séparément : incidents ouverts dans la fenêtre, incidents encore ouverts même plus anciens, incidents résolus et échéances non satisfaites.
+Configurable window, default 24 hours. Separately present incidents opened within the window, incidents still open even if older, resolved incidents, and unmet scheduled occurrences.
 
-Distinguer fenêtre glissante et journée calendaire. La cadence d'envoi est distincte de la fenêtre : proposition initiale, synthèse quotidienne à heure configurable.
+Distinguish rolling windows from calendar days. Sending frequency is separate from the window: initial proposal, a daily summary at a configurable time.
 
-## Rapport sur 7 jours
+## 7-day report
 
-Fenêtre configurable, 7 jours par défaut. Filtres : agent, politique, destination, statut et période. Rapport initial fondé sur l'échéance des jobs ; détailler séparément dates de démarrage et de fin.
+Configurable window, default 7 days. Filters: agent, policy, destination, status, and period. The initial report uses job scheduled times; show start and finish times separately.
 
-Indicateurs : échéances attendues, jobs créés, démarrés, réussis, incomplets, échoués, ignorés et manqués ; nombre de tentatives ; temps d'attente ; durée totale et durée par destination ; âge du dernier succès complet ; dernière vérification ; volumes disponibles.
+Metrics: expected occurrences; created, started, successful, incomplete, failed, skipped, and missed jobs; attempt count; waiting time; total and per-destination duration; age of the last complete success; latest verification; available volume metrics.
 
-Un taux de succès doit préciser son dénominateur. Proposition : jobs complètement réussis / échéances attendues hors maintenance, avec catégories détaillées ; ne pas gonfler ce taux en comptant les retries comme de nouveaux jobs.
+A success rate must state its denominator. Proposal: completely successful jobs / expected occurrences outside maintenance, with detailed categories. Do not inflate the rate by counting retries as new jobs.
 
-## Volumétrie
+## Data volumes
 
-Distinguer taille logique traitée, données ajoutées au dépôt, données ajoutées après compression si disponibles et trafic réseau effectivement mesuré. Ne pas appeler toutes ces mesures volume sauvegardé.
+Distinguish logical data processed, data added to the repository, compressed added data when available, and actually measured network traffic. Do not label all these measurements backup volume.
 
-Un compteur absent reste null ou indisponible, pas zéro. Identifier l'origine : Restic, mesure agent ou calcul serveur. Ne pas déduire le trafic réseau exact de la seule taille des données ajoutées.
+A missing counter remains null or unavailable, not zero. Identify its source: Restic, agent measurement, or server calculation. Do not infer exact network traffic solely from added-data size.
 
-En destinations multiples, les sommes par dépôt ne représentent pas nécessairement des données sources uniques. Séparer volumes source, backup et réplication.
+With multiple destinations, per-repository totals do not necessarily represent unique source data. Separate source, backup, and replication volumes.
 
-## Fraîcheur et restaurabilité
+## Freshness and recoverability
 
-Comparer le dernier succès complet à l'objectif de fraîcheur/RPO. Exposer séparément dernier check réussi et dernier test de restauration réussi. Un backup réussi ne remplace ni le contrôle d'intégrité ni la validation applicative d'une restauration.
+Compare the latest complete success with the freshness/RPO target. Separately expose the latest successful check and restore test. Successful backup does not replace integrity checking or application-level restore validation.
 
-## Présentation
+## Presentation
 
-Tableau de bord global, vue par agent, historique de politique, détail de job avec tentatives et destinations, liste d'incidents. Format d'export à décider ; CSV est proposé. Afficher le fuseau et les bornes de période ; une période sans historique suffisant doit être signalée.
+Global dashboard, per-agent view, policy history, job details with attempts and destinations, and incident list. Export format remains undecided; CSV is proposed. Display timezone and period boundaries; signal periods with insufficient history.

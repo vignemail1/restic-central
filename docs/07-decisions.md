@@ -1,58 +1,58 @@
-# Registre des décisions
+# Decision register
 
-Révision : 2026-10-10, après validation du porteur du projet. Projet en conception, non prêt pour la production.
+Revision: 2026-10-10, following project-owner validation. Design phase, not production ready.
 
-EXIGENCE : demandée par le porteur. ACCEPTÉ : explicitement validé. PROPOSÉ : non validé. REMPLACÉ : orientation initiale devenue incompatible. OUVERT : arbitrage restant.
+REQUIREMENT: requested by the owner. ACCEPTED: explicitly validated. PROPOSED: not validated. SUPERSEDED: incompatible initial direction. OPEN: pending decision.
 
-Les détails normatifs révisés figurent dans [les spécifications révisées](09-specifications-revisees.md).
+Revised details are provided in [the revised specifications](09-specifications-revisees.md).
 
-## Exigences
+## Requirements
 
-E01 à E08 restent applicables : Restic, agents/serveur REST, planification serveur, destinations et filesets, verrou local, signalement des jobs à vérifier, notifications 24 h, reporting 7 jours et avertissement non-production.
+E01 through E08 remain applicable: Restic, agents/server REST API, server scheduling, destinations and filesets, local lock, signaling jobs requiring inspection, 24-hour notifications, 7-day reporting, and non-production warning.
 
-Nouvelles exigences : plusieurs profils par machine ; suspension/désactivation machine et profil ; pre/post-hooks ; vérification TLS configurable ; Go statique multi-OS ; lancement manuel local ; interface web avec OpenLDAP et rôles ; export serveur cohérent local ; rétention des snapshots configurée côté client ; réplication primaire puis copy.
+New requirements: multiple profiles per machine; machine/profile suspension and disabling; pre/post-hooks; configurable TLS verification; static multi-OS Go binaries; local manual execution; web interface with OpenLDAP and roles; consistent local server export; client-configured snapshot retention; primary backup followed by copy.
 
-## Orientations P
+## P directions
 
-| ID | Statut | Décision |
+| ID | Status | Decision |
 |---|---|---|
-| P01 | PROPOSÉ, AMENDÉ | Serveur autorité des échéances automatiques ; lancement manuel local explicitement autorisé. Mode autonome automatique non décidé. |
-| P02 | ACCEPTÉ | Polling HTTPS sortant ; aucun port réseau entrant obligatoire sur l'agent. |
-| P03 | ACCEPTÉ | Configurations immuables versionnées rattachées aux jobs. |
-| P04 | PROPOSÉ | Secrets de dépôt résolus sur agent ; secrets de notifications sur serveur. |
-| P05 | ACCEPTÉ | Outbox persistante, livraison au moins une fois et déduplication. |
-| P06 | ACCEPTÉ | Séparer jobs, tentatives et résultats par destination. |
-| P07 | REMPLACÉ | Backup primaire puis réplication par copy, plutôt que backups indépendants. Règle globale de succès encore à préciser. |
-| P08 | PROPOSÉ | État partial distinct ; état d'observation distinct de l'exécution. |
-| P09 | ACCEPTÉ | Dépassement de délai : alerte et vérification, sans arrêt forcé par défaut. |
-| P10 | PROPOSÉ | Pas d'unlock automatique sur simple timeout. |
-| P11 | ACCEPTÉ, ÉTENDU | Agent et serveur en Go, compilation statique et multi-OS ; anciennes restrictions Linux seul remplacées. |
-| P12 | PARTIELLEMENT REMPLACÉ | Hooks désormais dans le périmètre. HA et restauration distante restent hors MVP proposé. |
-| P13 | ACCEPTÉ | Incidents immédiats, synthèse quotidienne et notification de rétablissement. |
-| P14 | PROPOSÉ | Rapports par échéance, retries séparés et métriques absentes signalées. |
+| P01 | PROPOSED, AMENDED | Server owns automatic scheduling; local manual execution explicitly allowed. Automatic autonomous mode undecided. |
+| P02 | ACCEPTED | Outbound HTTPS polling; no mandatory inbound agent network port. |
+| P03 | ACCEPTED | Immutable versioned configurations attached to jobs. |
+| P04 | PROPOSED | Repository secrets resolved on agent; notification secrets on server. |
+| P05 | ACCEPTED | Persistent outbox, at-least-once delivery, and deduplication. |
+| P06 | ACCEPTED | Separate jobs, attempts, and per-destination results. |
+| P07 | SUPERSEDED | Primary backup followed by copy rather than independent backups. Overall success rule still to define. |
+| P08 | PROPOSED | Separate partial state; observation state distinct from execution. |
+| P09 | ACCEPTED | Timeout: alert and inspection, no forced termination by default. |
+| P10 | PROPOSED | No automatic unlock based on timeout alone. |
+| P11 | ACCEPTED, EXTENDED | Agent/server in Go, static and multi-OS; previous Linux-only restrictions superseded. |
+| P12 | PARTIALLY SUPERSEDED | Hooks now in scope. HA and remote restore remain outside the proposed MVP. |
+| P13 | ACCEPTED | Immediate incidents, daily summary, and recovery notification. |
+| P14 | PROPOSED | Reports by scheduled occurrence, retries separate, missing metrics identified. |
 
-## Arbitrages O
+## O decisions
 
-| ID | Statut | Décision ou question restante |
+| ID | Status | Decision or remaining question |
 |---|---|---|
-| O01 | OUVERT | Moteur de stockage serveur et persistance locale. |
-| O02 | ACCEPTÉ | HTTPS/TLS avec token individuel ; mTLS optionnel. |
-| O03 | OUVERT | Version minimale Restic et matrice de compatibilité. |
-| O04 | ACCEPTÉ POUR LA CIBLE | Un an de jobs pour 300 machines ; profils, tentatives, événements et charges à dimensionner. RPO/RTO du serveur restent ouverts. |
-| O05 | ACCEPTÉ POUR LA PLANIFICATION | Intervalles réguliers, 24 h par défaut, ancre timestamp stable ; affichage datetime avec TZ. Politique exacte de rattrapage reste à décider. |
-| O06 | OUVERT | Agrégation primaire/copies, destinations facultatives et résultats incomplets. |
-| O07 | ACCEPTÉ | Cohérence applicative hors scope ; hooks peuvent préparer des fichiers cohérents sans garantie applicative du produit. |
-| O08 | ACCEPTÉ POUR LES SNAPSHOTS | Rétention des snapshots configurée côté client. Rétention détaillée des logs/événements/audit reste ouverte. |
-| O09 | ACCEPTÉ POUR LE PÉRIMÈTRE | Web opérateur, OpenLDAP possible, rôles applicatifs ; export cohérent local planifié ou manuel web/CLI. Stack UI et premier provider restent ouverts. |
-| O10 | OUVERT | Licence, distribution et mise à jour ; obligation Go statique multi-OS actée. |
-| O11 | ACCEPTÉ POUR LA RÉPLICATION | Backup primaire puis copy ; mode autonome automatique toujours ouvert. |
+| O01 | OPEN | Server storage engine and agent-local persistence. |
+| O02 | ACCEPTED | HTTPS/TLS with individual token; optional mTLS. |
+| O03 | OPEN | Minimum Restic version and compatibility matrix. |
+| O04 | ACCEPTED TARGET | One year of jobs for 300 machines; profiles, attempts, events, and load to size. Server RPO/RTO remain open. |
+| O05 | ACCEPTED SCHEDULING | Regular intervals, default 24 h, stable timestamp anchor; datetime display with TZ. Exact catch-up policy still open. |
+| O06 | OPEN | Primary/copy aggregation, optional destinations, and incomplete results. |
+| O07 | ACCEPTED | Application consistency outside scope; hooks may prepare consistent files without a product-level application guarantee. |
+| O08 | ACCEPTED SNAPSHOT POLICY | Snapshot retention configured on client. Detailed log/event/audit retention still open. |
+| O09 | ACCEPTED SCOPE | Operator web interface, OpenLDAP support, application roles; consistent local export scheduled or manual through web/CLI. UI stack and first provider still open. |
+| O10 | OPEN | License, distribution, and updates; static multi-OS Go requirement accepted. |
+| O11 | ACCEPTED REPLICATION | Primary backup followed by copy; automatic autonomous mode still open. |
 
-## Historique et conséquences
+## History and consequences
 
-Les validations P02, P03, P05, P06, P09, P11 et P13 proviennent explicitement du porteur du projet. Les autres propositions ne deviennent pas acceptées par simple publication.
+P02, P03, P05, P06, P09, P11, and P13 were explicitly validated by the project owner. Other proposals do not become accepted merely through publication.
 
-Les hooks augmentent les privilèges et la surface d'exécution : prévoir commandes structurées, restrictions locales, délais et audit. Le mode TLS non vérifié est possible mais doit être clairement identifié comme dégradé. Le lancement local impose le même moteur de verrouillage et une réconciliation idempotente avec le serveur.
+Hooks increase privileges and execution exposure: provide structured commands, local restrictions, time limits, and audit. Unverified TLS is possible but must be clearly marked as degraded. Local execution requires the same locking engine and idempotent server reconciliation.
 
-Une panne serveur bloque les nouveaux déclenchements centralisés mais ne doit pas empêcher un lancement manuel local sur configuration disponible. Une erreur de copy ne doit pas provoquer inutilement une nouvelle lecture des sources.
+Server downtime prevents new centrally triggered executions but must not prevent local manual execution using available configuration. Copy failure must not unnecessarily reread sources.
 
-Toute décision ultérieure doit indiquer contexte, alternatives, responsable, date et conséquences ; conserver les décisions remplacées.
+Future decisions must include context, alternatives, owner, date, and consequences; retain superseded decisions.
