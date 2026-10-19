@@ -1,14 +1,16 @@
 # Configuration and execution
 
-Status: proposed conceptual schema, not a usable configuration.
+Status: initial design, retained for historical context. Where this document conflicts with [the revised specifications](09-specifications-revisees.md), the revised specifications take precedence. This document is not an independent source of current requirements.
+
+For canonical terminology, see the [domain glossary](14-glossaire.md). For conceptual relationships, see [models, relationships, and invariants](15-modeles-relations.md).
 
 ## Configuration separation
 
 Agent configuration: identity, server endpoint, authentication, local storage paths, Restic binary, and local limits.
 
-Backup policy: sources, exclusions, repositories, central schedule, constraints, time limits, and optional retention. The server stores secret references; local resolution is preferred.
+The initial design described a backup policy with sources, exclusions, repositories, central schedule, constraints, time limits, and optional retention. Current profile requirements are specified in document 09; retain this distinction between historical names and current terminology.
 
-## Illustrative example
+## Illustrative example (historical)
 
 ```yaml
 schema_version: 1
@@ -41,7 +43,7 @@ schedule:
   catch_up: latest_only
 ```
 
-Fields and values are provisional. The example's time limits are not suitable defaults for every environment. Cron syntax, exclusions, and their translation into Restic arguments must be specified and tested.
+Fields and values are provisional. This historical example uses cron and independent destinations, both superseded by document 09 where applicable. Its time limits are not suitable defaults for every environment. Any future configuration format, exclusion semantics, and translation to Restic arguments must be specified and tested.
 
 ## Prerequisites
 
@@ -49,17 +51,13 @@ Check required paths, permissions, and expected mounts; do not silently back up 
 
 Define whether backups stay within one filesystem and how symbolic links are handled. For application data, plan consistent dumps or snapshots. Files being modified do not guarantee database consistency.
 
-Future hooks must have an allowlist, restricted environment, timeout, error handling, and cleanup rules even after failure. They are outside the MVP.
+Hook behavior and safety requirements are covered by document 09; do not treat the initial MVP exclusion as current. Any implementation needs an allowlist, restricted environment, timeout, error handling, and cleanup rules even after failure.
 
 ## Multiple destinations
 
-Independent strategy: run a backup for each repository. MVP direction: sequential destinations; successive reads may observe different data.
+The initial design considered independent backups per repository and sequential destinations. This is superseded by the primary-backup-then-copy direction in document 09. Success aggregation, required versus optional destinations, and incomplete snapshots remain topics to resolve as indicated in the revised specifications and decision register.
 
-Backup-then-copy strategy: create a primary snapshot and copy it to secondary repositories. This extension must separately handle primary failure, replication, authentication for both repositories, and snapshot identification. Do not assume identical snapshot IDs across repositories.
-
-The job succeeds if every required destination succeeds completely. An optional destination failure remains visible and may open an incident without automatically making the job fail. If a required destination is incomplete, the overall result cannot be succeeded. The exhaustive aggregation table remains to be formalized.
-
-Retries target only necessary operations, preserve traceability, and account for the possibility that another attempt creates a new snapshot.
+Retries should target only necessary operations, preserve traceability, and account for the possibility that another attempt creates a new snapshot.
 
 ## Running Restic
 
@@ -77,7 +75,7 @@ Parsing errors are explicit; do not invent missing metrics.
 - progress_timeout: time without progress; optional detection.
 - termination_grace_period: time between graceful termination and escalation.
 
-Proposed default: exceeding a limit flags an anomaly and requires inspection; it does not automatically kill Restic. Automatic termination is a separate option. Lack of progress alone is not sufficient evidence of a stuck process.
+The initial proposal was to flag an anomaly for inspection when a limit is exceeded, not automatically kill Restic. Automatic termination requires a separate decision. Lack of progress alone is not sufficient evidence of a stuck process.
 
 ## Locking and recovery
 
@@ -89,7 +87,7 @@ After restart, inspect persisted attempts and any process still running. A PID a
 
 ## Maintenance
 
-Plan separate future jobs for forget, prune, check, copy, and restore tests. Snapshot deletion and destructive maintenance require specific permissions and safeguards.
+Plan separate jobs for forget, prune, check, copy, and restore tests. Snapshot deletion and destructive maintenance require specific permissions and safeguards.
 
 Validation references:
 - https://restic.readthedocs.io/en/stable/040_backup.html

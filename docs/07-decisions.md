@@ -4,7 +4,7 @@ Revision: 2026-10-10, following project-owner validation. Design phase, not prod
 
 REQUIREMENT: requested by the owner. ACCEPTED: explicitly validated. PROPOSED: not validated. SUPERSEDED: incompatible initial direction. OPEN: pending decision.
 
-Revised details are provided in [the revised specifications](09-specifications-revisees.md).
+The [revised specifications](09-specifications-revisees.md) are the normative detailed reference for topics they cover. This register records decision status and history, not a competing specification. If a status here conflicts with a detailed rule, stop and resolve the discrepancy before implementation; do not infer acceptance from publication alone.
 
 ## Requirements
 

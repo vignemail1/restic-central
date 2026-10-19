@@ -1,40 +1,36 @@
 # restic-central
 
-> STATUS: PROJECT IDEA / DESIGN PHASE — NOT PRODUCTION READY.
-> No operational agent, server, or interface is provided. The features described are unimplemented and unvalidated goals. Do not use this project to protect real data.
+> **STATUT : IDÉE DE PROJET / PHASE DE CONCEPTION — NON PRÊT POUR LA PRODUCTION.**
+> Aucun agent, serveur ou interface opérationnel n’est fourni. Les fonctionnalités décrites sont des objectifs non implémentés et non validés. Ne pas utiliser ce projet pour protéger des données réelles.
 
-## Purpose
+## Objectif
 
-Design a multi-machine Restic backup orchestrator: Go agents and server, static multi-OS binaries, REST API, monitoring, and an operator web interface. Restic remains the backup engine; the central server is not the backup storage.
+Concevoir un orchestrateur de sauvegardes Restic multi-machines : agents et serveur Go, binaires statiques multi-OS, API REST, supervision et interface web opérateur. Restic reste le moteur de sauvegarde ; le serveur central n’héberge pas les dépôts de sauvegarde.
 
-## Specified features
+## État du projet
 
-- Multiple profiles per machine, with separate include/exclude filesets.
-- Backup intervals anchored to a stable timestamp, defaulting to 24 hours.
-- Disabling and suspension at machine or profile level.
-- Configurable pre-hooks and post-hooks, including file preparation and temporary-data cleanup.
-- Backup to a primary repository followed by replication using restic copy.
-- Operator-triggered local execution, with the same locking and reporting mechanisms.
-- HTTPS API with individual tokens; optional mTLS; configurable certificate verification.
-- Multi-channel notifications, configurable 24-hour summaries and 7-day reports.
-- Web interface, support for OpenLDAP authentication, and application roles.
-- Consistent local server exports, scheduled or triggered through the web interface/CLI, for backup by an external process.
-- Retention target: one year of jobs for 300 machines, subject to testing.
+Les décisions acceptées sont des engagements de conception, pas des fonctionnalités livrées. Les commandes, champs et endpoints restent illustratifs. Aucun résultat de test, lint, benchmark ou audit n’est revendiqué. La licence, les versions prises en charge et les modalités de distribution restent à définir.
 
-## Documentation and reading order
+## Documentation
 
-The [revised specifications](docs/09-specifications-revisees.md) take precedence on the topics they modify. Documents 01 through 08 retain the initial design; conflicting provisions are superseded by this revision, particularly cron scheduling, the exclusion of hooks, independent backups, and Linux-only targeting.
+### Autorité et statut
 
-1. [Revised specifications — priority document](docs/09-specifications-revisees.md)
-2. [Updated decision register](docs/07-decisions.md)
-3. [Initial vision](docs/01-vision-exigences.md)
-4. [Initial architecture](docs/02-architecture-modele.md)
-5. [Initial configuration and execution](docs/03-configuration-execution.md)
-6. [API and reliability](docs/04-api-fiabilite.md)
-7. [Initial security and operations](docs/05-securite-exploitation.md)
-8. [Notifications and reports](docs/06-notifications-rapports.md)
-9. [Initial roadmap](docs/08-roadmap-validation.md)
+- [Spécifications révisées](docs/09-specifications-revisees.md) : référence normative actuelle pour les sujets qu’elles traitent. Elles remplacent les orientations initiales incompatibles.
+- [Registre des décisions](docs/07-decisions.md) : statut des décisions (exigence, acceptée, proposée, remplacée ou ouverte) ; il ne remplace pas les spécifications détaillées. En cas d’écart, vérifier le statut dans ce registre et clarifier toute contradiction avant implémentation.
+- Les documents 01–08 décrivent la conception initiale et restent utiles comme historique et contexte. Ne pas les interpréter comme exigences courantes lorsqu’ils contredisent les spécifications révisées.
+- [Glossaire](docs/14-glossaire.md) : source unique des définitions des termes du domaine.
+- [Modèles et relations](docs/15-modeles-relations.md) : propositions de cardinalités, relations et invariants ; ce n’est ni un schéma SQL livré ni une source alternative de définitions.
+- Les documents 11–13 apportent des analyses complémentaires, sous réserve du statut indiqué dans chacun. Ils ne supplantent pas les spécifications révisées.
 
-## Maturity
+### Parcours de lecture
 
-Accepted decisions are design commitments, not delivered features. Command names, fields, and endpoints remain illustrative. No test, lint, benchmark, or audit results are claimed. The license, supported versions, and distribution arrangements remain to be defined.
+1. [Spécifications révisées — référence normative](docs/09-specifications-revisees.md)
+2. [Registre des décisions](docs/07-decisions.md)
+3. [Vision initiale](docs/01-vision-exigences.md) et [architecture initiale](docs/02-architecture-modele.md)
+4. Configuration/exécution, [API/fiabilité](docs/04-api-fiabilite.md), sécurité/exploitation et notifications : documents 03–06
+5. [Plan de validation](docs/08-roadmap-validation.md)
+6. Analyses complémentaires : documents 11–13, puis [glossaire](docs/14-glossaire.md) et [modèle conceptuel](docs/15-modeles-relations.md)
+
+Les documents sont organisés par rôle : une définition se maintient dans le glossaire ; les documents thématiques décrivent les exigences et comportements ; le modèle conceptuel décrit les relations. Éviter de recopier une définition : ajouter plutôt un lien vers sa source canonique.
+
+> **Note sur le document 10 :** `docs/10-options-statistiques.md` n’est pas publié. Toute référence à son contenu doit être considérée comme une piste de travail, pas comme une documentation disponible.
