@@ -1,8 +1,8 @@
 # Glossaire du domaine
 
-Projet en conception — NON PRÊT POUR LA PRODUCTION. Révision : 2026-10-10.
+Projet en conception — **NON PRÊT POUR LA PRODUCTION**. Révision : 2026-10-10.
 
-Ce glossaire définit les termes employés dans les spécifications. Les modèles supplémentaires sont des propositions de normalisation, pas un schéma SQL livré ni une validation implicite de toutes leurs règles. Voir [les relations](15-modeles-relations.md).
+Ce fichier est la source canonique des définitions des termes du domaine. Les autres documents doivent y renvoyer plutôt que recopier ces définitions. Les modèles et cardinalités décrits dans [Modèles, relations et invariants](15-modeles-relations.md) restent des propositions conceptuelles : ils ne constituent ni un schéma SQL livré ni une validation implicite de toutes leurs règles.
 
 ## Identité et configuration
 
@@ -68,8 +68,10 @@ Ce glossaire définit les termes employés dans les spécifications. Les modèle
 | Opérateur / Operator | Identité humaine avec rôles applicatifs ; distincte d'un Agent et de son token. |
 | Audit / AuditEvent | Trace d'une action administrative ou sensible, distincte des progressions Restic. |
 
-## Distinctions obligatoires
+## Distinctions importantes
 
 Un job peut réussir sans nouveau snapshot. Une copy peut échouer alors que le backup primaire a réussi. Un agent injoignable peut avoir terminé un job. Une maintenance machine n'est pas une maintenance du repository. Un export serveur n'est pas une restauration applicative. Un compteur absent n'est pas zéro.
 
-Les détails du document 10 sur les options et statistiques restent une publication en attente ; ce glossaire ne prétend pas qu'il est présent dans le dépôt.
+## Documents complémentaires
+
+Le document 10 sur les options et statistiques n'est pas publié dans le dépôt. Son contenu ne peut donc pas être traité comme spécification disponible ; consulter les documents existants et confirmer explicitement toute proposition avant implémentation.
