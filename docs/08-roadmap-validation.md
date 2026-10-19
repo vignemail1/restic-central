@@ -1,6 +1,6 @@
 # Roadmap and validation strategy
 
-Status: delivery order validated by the project owner on 2026-10-19; no milestone completed, implementation delivered, or deadline guaranteed. The decisions are recorded in [Validated development decisions](16-decisions-for-development.md). Each step has its own tests and acceptance criteria. The project remains design-only and NOT PRODUCTION READY until implementation and explicit qualification.
+Status: delivery order validated by the project owner on 2026-10-19; no milestone completed, implementation delivered, or deadline guaranteed. Decisions are recorded in [the decision register](07-decisions.md) and [validated development decisions](16-decisions-for-development.md). Each step has its own tests and acceptance criteria. The project remains design-only and NOT PRODUCTION READY until implementation and explicit qualification.
 
 ## Delivery sequence
 
@@ -19,18 +19,18 @@ Status: delivery order validated by the project owner on 2026-10-19; no mileston
 
 Each step must define and pass its own tests before the next integration is treated as complete. At minimum:
 
-- **1 — Agent:** configuration validation; pre-hook failure prevents Restic; Restic and post-hook exit-code aggregation; partial results; machine lock; timer/crontab invocation; Outbox durability across restart and server outage; no secret leakage.
+- **1 — Agent:** configuration validation; pre-hook failure prevents Restic; Restic and post-hook exit-code aggregation according to the validated rules; partial results for failed replication and failed post-hook after successful backup; machine lock; timer/crontab invocation; Outbox durability across restart and server outage; no secret leakage.
 - **2–3 — Enrollment:** authentication, identity binding, duplicate/re-enrollment behavior, revocation/replacement, and failure/retry tests on both server and agent sides.
 - **4–5 — Reporting:** versioned-contract validation, idempotent at-least-once delivery, duplicate/out-of-order events, transactional persistence-before-acknowledgment, offline queueing, and reconnect reconciliation.
 - **6–7 — Configuration:** versioned JSON schema validation, immutable configuration revisions, endpoint authorization, compatible/unsupported schema behavior, safe persistence without secrets, and agent restart/reload behavior.
 - **8 — Scheduling:** stable occurrence identity, replacement of an unretrieved expired planned job, machine-wide serialization, cancellation reporting when another backup is running, offline/reconnect behavior, and timestamp/time-zone boundaries.
 
-Before declaring the whole system ready for operational use, also test offline `forget`/`prune` with Outbox delivery, failed replication and post-hook partial status, full PostgreSQL export restoration, OpenLDAP `posixAccount` search and local superadmin, complete operator audit, supported OS/architecture builds, and recovery scenarios. Do not claim production readiness from phase completion alone.
+Before declaring the whole system ready for operational use, also test offline `forget`/`prune` with Outbox delivery, retention isolation and stale-job safeguards, failed replication and post-hook partial status, full PostgreSQL export restoration, OpenLDAP `posixAccount` search and local superadmin, complete operator audit, supported OS/architecture builds, and recovery scenarios. Do not claim production readiness from phase completion alone.
 
 ## Cross-cutting test strategy
 
 - **Unit:** configuration and schema validation, Restic argument compilation, exit-code translation, hook gating, result aggregation, state transitions, occurrence identity, retention mapping, and time calculations.
-- **Contract:** authentication/authorization, version negotiation, idempotence, pagination where applicable, invalid and oversized payloads, unknown fields, and out-of-order events.
+- **Contract:** authentication/authorization, version compatibility and unsupported versions, idempotence, pagination where applicable, invalid and oversized payloads, unknown fields, and out-of-order events.
 - **Integration:** actual Restic binary and disposable repository; backup, hook execution, copy, check, forget/prune, and restore. Use synthetic data only.
 - **Resilience:** API outage after Restic finishes, crash before/after acknowledgment, duplicates, full disk, agent restart, stale planned jobs, unavailable secrets, expired/revoked credentials, and late results.
 - **Concurrency:** simultaneous requests, multiple profiles under machine-wide locking, restart during backup, multiple scheduler workers, and concurrent maintenance.
