@@ -1,10 +1,10 @@
-# Modèles, relations et invariants
+# Models, relationships, and invariants
 
-Projet en conception — NON PRÊT POUR LA PRODUCTION. Modèle conceptuel proposé, pas un schéma PostgreSQL définitif.
+Design phase — **NOT PRODUCTION READY**. This is a proposed conceptual model, not a definitive PostgreSQL schema.
 
-Le [glossaire](14-glossaire.md) précise les termes. Les exigences publiées restent prioritaires ; les nouvelles cardinalités sont proposées pour lever les ambiguïtés, pas automatiquement acceptées.
+See the [glossary](14-glossaire.md) for canonical terminology. Published requirements take precedence; proposed cardinalities clarify ambiguities but are not automatically accepted.
 
-## 1. Graphe principal
+## 1. Main graph
 
 ```mermaid
 erDiagram
@@ -27,83 +27,83 @@ erDiagram
     Incident ||--o{ NotificationDelivery : alerts
 ```
 
-Lecture : || signifie exactement un, o{ signifie zéro à plusieurs. Le diagramme ne montre pas toutes les relations optionnelles et contraintes ; voir les tables suivantes.
+In the diagram, || means exactly one and o{ means zero to many. The diagram does not show every optional relationship or constraint; see the tables below.
 
-## 2. Identités, propriété et configuration
+## 2. Identity, ownership, and configuration
 
-| Relation | Cardinalité proposée / invariant |
+| Relationship | Proposed cardinality / invariant |
 |---|---|
-| Machine -> Agent | 0..N enrôlements historiques ; au plus un agent actif autorisé par défaut, remplacement explicite. |
-| Machine -> BackupProfile | 0..N ; chaque profil a exactement un propriétaire machine. |
-| Machine -> Repository | 0..N ; chaque dépôt a exactement un propriétaire, sans partage inter-machines. |
-| BackupProfile -> ProfileDestination | 1..N pour un profil exécutable ; exactement un primaire et 0..N destinations de réplication. |
-| ProfileDestination -> Repository | Exactement un dépôt ; propriétaire identique à celui du profil. |
-| Repository -> BackupProfile | 0..N profils d'une même machine via les destinations ; mutualisation intra-machine encore à ratifier. |
-| BackupProfile -> ConfigRevision | 1..N après création ; révisions immuables, au plus une courante. |
-| ConfigRevision -> FileSet/HookDefinition/RetentionPolicy | Composition immuable de la configuration ; toute modification crée une révision. Objets embarqués ou tables normalisées à décider. |
+| Machine -> Agent | 0..N historical enrollments; at most one active agent authorized by default, with explicit replacement. |
+| Machine -> BackupProfile | 0..N; every profile has exactly one machine owner. |
+| Machine -> Repository | 0..N; every repository has exactly one owner and is not shared across machines. |
+| BackupProfile -> ProfileDestination | 1..N for an executable profile; exactly one primary and 0..N replication destinations. |
+| ProfileDestination -> Repository | Exactly one repository; its owner matches the profile's owner. |
+| Repository -> BackupProfile | 0..N profiles from the same machine through destinations; intra-machine sharing remains to be ratified. |
+| BackupProfile -> ConfigRevision | 1..N after creation; revisions are immutable, with at most one current revision. |
+| ConfigRevision -> FileSet/HookDefinition/RetentionPolicy | Immutable configuration composition; embedded objects versus normalized tables remain to be decided. |
 
-Les références de secrets ne donnent pas automatiquement accès aux valeurs. Les credentials de repository et l'identité REST de l'agent ont des cycles distincts. Une suppression administrative ne doit pas effacer l'historique : archivage/logical deletion proposé.
+Secret references do not automatically grant access to secret values. Repository credentials and the agent's REST identity have separate lifecycles. Administrative deletion must not erase history; archival/logical deletion is proposed.
 
-## 3. Programmations et cibles
+## 3. Schedules and targets
 
-Une Schedule appartient à une machine et cible exactement un périmètre compatible avec son type : profil pour backup, sélection profil/repository pour forget, repository pour prune/check/stats. Le schéma doit interdire les combinaisons invalides ; éviter un target_id opaque sans contrôle d'intégrité.
+A Schedule belongs to a machine and targets exactly one scope compatible with its type: a profile for backup, a profile/repository selection for forget, or a repository for prune/check/stats. The schema should forbid invalid combinations; avoid an opaque target_id without referential-integrity checks.
 
-Schedule -> Job : 0..N occurrences historiques. Job -> Schedule : 0..1 ; un lancement manuel peut ne pas avoir de programmation.
+Schedule -> Job: 0..N historical occurrences. Job -> Schedule: 0..1; a manual launch may have no schedule.
 
-PlanningRevision décrit l'ensemble distribué à un agent. Un même Job peut figurer dans plusieurs versions successives du planning ; cela ne crée pas plusieurs jobs. Une tâche remplacée ou annulée garde une trace.
+PlanningRevision describes the set distributed to an agent. A Job may appear in multiple successive planning versions; this does not create multiple jobs. A replaced or canceled task retains a record.
 
-MaintenanceWindow cible exactement une machine, un profil ou un repository ; début, fin éventuelle, motif et auteur. Son interprétation et priorité doivent être explicites. Une suspension n'est pas un nouvel objet de sauvegarde et ne détruit pas les résultats précédents.
+MaintenanceWindow targets exactly one machine, profile, or repository, with start, optional end, reason, and author. Its interpretation and precedence must be explicit. A suspension does not create another backup object or delete previous results.
 
-## 4. Jobs, tentatives et étapes
+## 4. Jobs, attempts, and operations
 
-Un Job appartient à une machine et porte type, origin, scheduled_at éventuel, références de configuration et cible. Job -> Attempt : 0..N ; zéro avant démarrage, plusieurs après retries. Une tentative a exactement un agent exécutant et un numéro unique dans son job.
+A Job belongs to a machine and carries type, origin, optional scheduled_at, configuration references, and target. Job -> Attempt: 0..N; zero before start, multiple after retries. An attempt has exactly one executing agent and a unique number within its job.
 
-PROPOSITION : distinguer catégorie du job et commande de l'étape. Un job backup composite comprend pre-hooks, commande backup primaire, commandes copy et post-hooks. forget/prune/check/stats sont des jobs autonomes. Une copy seule peut aussi être un job de reprise, lié au snapshot source et au backup d'origine, sans nouvelle lecture des sources.
+PROPOSAL: distinguish job category from operation command. A composite backup job contains pre-hooks, the primary backup command, copy commands, and post-hooks. forget/prune/check/stats are standalone jobs. A copy alone may also be a recovery job linked to its source snapshot and original backup, without rereading sources.
 
-Attempt -> Operation : 0..N étapes ordonnées ; chaque étape possède type, timestamps, état et code éventuel. Un HookResult dépend d'une étape hook ; un DestinationResult d'une étape Restic ciblant un dépôt. Pour copy, enregistrer source et destination explicitement.
+Attempt -> Operation: 0..N ordered steps; each has type, timestamps, state, and optional code. A HookResult belongs to a hook operation; a DestinationResult belongs to a Restic operation targeting a repository. For copy, record source and destination explicitly.
 
-JobDependency relie un job dépendant à un prérequis : relation N..N dirigée, acyclique, condition explicite de succès/fin. Une dépendance impossible doit être signalée, pas laisser un job attendre indéfiniment.
+JobDependency links a dependent job to a prerequisite: a directed N..N relation, acyclic, with an explicit completion/success condition. An impossible dependency must be reported rather than leaving a job waiting indefinitely.
 
-Le job conserve son résultat agrégé, la tentative son résultat et chaque étape son résultat. Ne pas confondre succès du primaire et succès global ; la table d'agrégation reste ouverte.
+The job stores its aggregate result, the attempt its result, and each operation its result. Do not confuse primary success with overall success; aggregation remains open.
 
-## 5. Snapshots et réplication
+## 5. Snapshots and replication
 
-SnapshotRecord appartient à un repository. Clé métier proposée : repository_id + restic_snapshot_id ; l'ID Restic seul n'est pas une identité globale du modèle.
+SnapshotRecord belongs to a repository. Proposed business key: repository_id + restic_snapshot_id; the Restic ID alone is not a globally unique model identity.
 
-Un résultat backup peut produire 0..1 snapshot : absence de changement possible. Pour la rétention, une association JobSnapshot permet qu'un job référence plusieurs présences de snapshots, notamment primaire et replicas, et qu'un snapshot soit référencé par plusieurs jobs réussis sans nouvelle création.
+A backup result may produce 0..1 snapshot because no changes may have occurred. For retention, a JobSnapshot association allows a job to reference multiple snapshot presences, including primary and replicas, and a snapshot to be referenced by multiple successful jobs without a new creation.
 
-Chaque association distingue rôle created, reused ou replicated et résultat de provenance. Une relation ReplicationLink relie présence source et présence destination, avec l'opération de copy. Les IDs ne sont pas supposés identiques.
+Each association distinguishes created, reused, or replicated role and provenance result. A ReplicationLink connects source and destination snapshot presences with the copy operation. IDs are not assumed identical.
 
-Les repositories source/destination doivent avoir la même machine propriétaire. Un snapshot découvert sans association fiable reste unknown/unmanaged pour la purge proposée. Un snapshot supprimé du dépôt conserve une trace de métadonnées tant que nécessaire à l'audit et à la rétention.
+Source and destination repositories must have the same machine owner. A discovered snapshot with no reliable association remains unknown/unmanaged for the proposed purge. A deleted snapshot retains metadata as long as needed for audit and retention.
 
-PROPOSITION : indexer aussi profil/job par tags Restic stables pour la réconciliation ; les tags ne sont ni une ACL ni une preuve suffisante de succès.
+PROPOSAL: also index stable profile/job tags in Restic for reconciliation; tags are neither an ACL nor sufficient proof of success.
 
-## 6. Métadonnées, incidents et utilisateurs
+## 6. Metadata, incidents, and users
 
-Attempt -> Event : 0..N ; event_id unique et séquence définie. Les heartbeats d'agent sont distincts des événements d'exécution. Les résultats doivent rester disponibles même si les événements détaillés sont purgés.
+Attempt -> Event: 0..N; event_id is unique and sequencing is defined. Agent heartbeats are distinct from execution events. Results must remain available even if detailed events are purged.
 
-RepositoryObservation appartient à un repository et possède collecteur, instant, mode et scope. Elle peut référencer un profil ou une sélection de snapshots. Une observation peut couvrir plusieurs snapshots ; ne pas en faire un compteur de volume à cumuler sans sémantique.
+RepositoryObservation belongs to a repository and has a collector, timestamp, mode, and scope. It may reference a profile or snapshot selection. An observation may cover multiple snapshots; do not treat it as a volume counter to accumulate without defined semantics.
 
-Incident cible une ressource précise et peut regrouper plusieurs occurrences/events. NotificationDelivery appartient à une notification d'incident ou de synthèse ; un envoi de synthèse n'a pas nécessairement un incident unique. La relation Incident du diagramme illustre le cas d'alerte, pas tous les envois.
+An Incident targets a specific resource and may group multiple occurrences/events. NotificationDelivery belongs to an incident notification or summary; a summary delivery need not have a single incident. The Incident edge in the diagram illustrates alerting, not every delivery.
 
-Operator et Role ont une relation N..N proposée. Identité OpenLDAP et rôles applicatifs sont distincts ; l'authentification ne suffit pas à autoriser l'action. AuditEvent référence auteur humain ou système et ressource, sans credentials.
+Operator and Role have a proposed N..N relationship. OpenLDAP identity and application roles are distinct; authentication alone does not authorize an action. AuditEvent references a human or system actor and a resource, without credentials.
 
-ServerExport possède demandeur/origine, dates, état, version de format et manifeste. C'est un objet serveur, pas un job attribué à une machine cliente ; un moteur commun de tâches peut être partagé sans confondre les propriétaires.
+ServerExport has requester/origin, timestamps, state, format version, and manifest. It is a server object, not a job owned by a client machine; an execution engine may be shared without conflating ownership.
 
-## 7. Invariants à imposer
+## 7. Invariants to enforce
 
-- Propriétaire unique d'un dépôt ; aucune destination/copy inter-machines.
-- Révision historique immuable, conservation des références utiles.
-- Identité d'occurrence unique ; retries et redistribution ne créent pas de doublons.
-- Une seule exécution active autorisée par machine selon l'exigence actuelle ; les processus externes ne sont pas implicitement couverts.
-- Expiration de lease différente d'arrêt confirmé.
-- Aucun succès supposé à partir de snapshot_id ou de présence de fichiers.
-- Pas de suppression destructive sans correspondance et règles de rétention valides.
-- Pas d'inventaire des fichiers transmis au serveur ; FileSet n'est pas une télémétrie de fichiers.
-- Annulation demandée distincte de canceled confirmé.
+- A repository has one owner; no cross-machine destination/copy.
+- Historical revisions are immutable and useful references are retained.
+- Occurrence identity is unique; retries and redistribution do not create duplicates.
+- Only one active execution is authorized per machine under the current requirement; external processes are not implicitly covered.
+- Lease expiration is not confirmed process termination.
+- Never infer success from snapshot_id or file presence.
+- No destructive deletion without reliable mapping and valid retention rules.
+- No file inventory is sent to the server; FileSet is not file telemetry.
+- A cancellation request is distinct from confirmed cancellation.
 
-## 8. Questions à trancher avant SQL/API
+## 8. Questions to resolve before SQL/API
 
-Partage intra-machine des dépôts ; stockage local agent ; cardinalité des agents actifs lors d'un remplacement ; agrégation des copies/hooks ; stratégie de références historiques ; représentation SQL des cibles polymorphes ; reprise d'une copy comme job distinct ; granularité des hooks ; attribution des rôles OpenLDAP.
+Intra-machine repository sharing; agent-local storage; number of active agents during replacement; aggregation of copies/hooks; historical-reference strategy; SQL representation for polymorphic targets; retrying a copy as a separate job; hook granularity; OpenLDAP role mapping.
 
-Le schéma PostgreSQL, les migrations et le contrat REST devront traduire ces invariants avec tests. Ce document ne valide pas les amendements encore en attente ni une implémentation.
+The PostgreSQL schema, migrations, and REST contract must implement these invariants with tests. This document does not approve pending amendments or claim an implementation.
