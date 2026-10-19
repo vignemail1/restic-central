@@ -1,8 +1,8 @@
 # Revised specifications
 
-Revision: 2026-10-10. Status: design only, NOT PRODUCTION READY.
+Revision: 2026-10-19. Status: design only, NOT PRODUCTION READY. No behavior is implemented.
 
-This document supplements the initial design and takes precedence where the topics below conflict. No behavior is implemented. Requirements come from the project owner; details marked PROPOSAL remain subject to validation.
+This document supplements the initial design and takes precedence where the topics below conflict. Requirements come from the project owner; details marked PROPOSAL remain subject to validation. Decisions explicitly validated on 2026-10-19 are recorded in [the decision register](07-decisions.md) and [validated development decisions](16-decisions-for-development.md). Acceptance of a scoped rule does not validate adjacent proposals.
 
 ## 1. Profiles and filesets
 
@@ -42,9 +42,9 @@ PROPOSED contract: executable + args, no implicit shell; ordered list, working d
 
 Recommended sequence: machine lock -> prerequisites -> pre-hooks -> primary backup -> copies -> post-hooks -> result persistence -> lock release. Copies consume the snapshot, not the prepared source files.
 
-PROPOSAL: a failed required pre-hook prevents backup; a cleanup post-hook is attempted even after an earlier failure if configured accordingly. Hook failures are retained separately from Restic results. Cleanup failure may degrade a job without invalidating a successful snapshot.
+**Validated result rules (scoped):** a configured pre-hook must return 0 before Restic backup starts; without a pre-hook, Restic's exit status determines backup success. Without a post-hook, the job succeeds when Restic succeeds. With a post-hook, the job succeeds if the hook returns 0; a failed post-hook after a successful Restic backup makes the job partial. Preserve individual hook, primary-backup, and replication results.
 
-Exact per-step before/after scope, always/on_success/on_failure conditions, and aggregation rules still need ratification. Cancellation or crash does not guarantee cleanup: document recovery and manual cleanup. The overall limit includes hooks; each hook also has its own limit.
+A failed required pre-hook prevents backup. A cleanup post-hook is attempted after earlier failure only if its configured condition allows it. The status when primary backup and post-hook both fail, multiple-hook aggregation, exact per-step scope and conditions remain open. Cancellation or crash does not guarantee cleanup: document recovery and manual cleanup. The overall limit includes hooks; each hook also has its own limit.
 
 Application consistency is outside scope: the operator is responsible for preparing consistent files through pre-hooks. The product orchestrates and reports; it does not certify database consistency.
 
@@ -54,17 +54,15 @@ A profile defines a primary repository and replication destinations. After backu
 
 Retain the primary snapshot and mappings to copied snapshots per destination; do not assume identical IDs. The agent has the permissions and secret references needed for both repositories involved in each copy.
 
-Replication failure is distinct from primary-backup failure. Copy retries reuse the source snapshot while available; do not repeat backup solely because an API acknowledgment was lost or a copy failed.
+**Validated:** a job is partial if the primary backup succeeded but replication failed. Copy retries reuse the source snapshot while available; do not repeat backup solely because an API acknowledgment was lost or a copy failed.
 
-Copy concurrency and overall success rules remain open. PROPOSAL: only required copies affect complete success; incomplete snapshots are not replicated by default without an explicit choice. Copies, duration, and volume remain individually visible.
+Copy concurrency and aggregate results when multiple or optional destinations exist remain open. PROPOSAL: only required copies affect complete success; incomplete snapshots are not replicated by default without an explicit choice. Copies, duration, and volume remain individually visible.
 
 ## 6. Client-side retention
 
-Snapshot retention is defined in client configuration, with per-profile/repository parameters where needed. Format and defaults remain open.
+**Validated:** retention is configured on the client through Restic directives, with the operator choosing the policy. An expired snapshot that has not been replicated is considered no longer valid and may be deleted under that configured policy. Cached `forget` and `prune` jobs execute while the server is unreachable; results are persisted in the Outbox for later delivery.
 
-Define machine/profile selections so forget cannot affect another profile's snapshots in a shared repository. Specify primary and replica policies, maintenance windows, and separation of forget/prune.
-
-PROPOSAL: do not delete a primary snapshot awaiting required replication without an explicit expiration policy and incident. Coordinate locks and maintenance operations. No automatic destructive deletion is implicit in this specification.
+The exact directive mapping, profile/repository isolation, primary and replica policies, maintenance windows, stale/superseded cached-job safeguards, and separation of forget/prune remain to be specified and tested before enabling destructive operations. No additional destructive deletion behavior is implied.
 
 ## 7. Local agent command
 
@@ -96,17 +94,15 @@ Restic remains a separate executable whose installation, version, and validation
 
 ## 10. Web interface and OpenLDAP
 
-A web interface lets operators inspect machine/profile/job state, incidents, and reporting, and trigger server exports. OpenLDAP authentication must be supported; roles are managed by the server application.
+**Validated initial authentication scope:** OpenLDAP users using `posixAccount` with a configurable search filter, and local accounts including a local superadmin. Every operator action must be audited, including login, logout, modifications, creation, and agent enrollment.
 
-Define user search, bind, base DN, filters, optional group mapping, and role assignment. PROPOSAL: TLS-protected LDAP, least-privilege search account, secure web sessions, and server-side authorization for every action.
-
-Successful LDAP authentication does not imply administrator privileges. Audit suspensions, changes, exports, and privileged actions; protect web actions against CSRF. Emergency accounts and LDAP outages remain to be addressed.
+The exact user search/bind procedure, base DN, optional group mapping, role assignment, TLS requirements, secure sessions, authorization checks, audit tamper resistance and retention remain to specify. Successful LDAP authentication does not imply administrator privileges. Emergency-account recovery and LDAP outages remain to be addressed. Protect web actions against CSRF.
 
 ## 11. Consistent server export
 
 The server schedules a consistent export of configuration, database, and recovery material into a local directory. It can also be triggered through the web interface or local CLI; illustrative example: restic-central-server export create.
 
-Backup of that directory by another process is outside scope. The export is not a backup of Restic repositories.
+**Validated:** PostgreSQL export must be consistent and sufficient to restore complete server PostgreSQL state after total database loss. Coordinate the dump with server configuration and recovery material as required; full restoration must be tested. Backup of the export directory by another process is outside scope. The export is not a backup of Restic repositories.
 
 PROPOSAL: one engine for all three origins, an export lock, and a transactional snapshot or native method appropriate to the database; do not arbitrarily copy live database files. Capture a configuration revision consistent with the database.
 
@@ -126,6 +122,4 @@ Keep default 7-day reports and 24-hour summaries, filterable by machine/profile/
 
 ## 13. Revised validation and roadmap
 
-Add tests for concurrent profiles; machine-suspension precedence; suspended queued jobs; resumption without anchor drift; offline manual execution; failed pre-hook and cleanup; failed copy without new backup; per-profile retention isolation; verified/unverified TLS/private CA/mTLS; revoked token; LDAP and roles; export concurrent with DB writes and restoration; builds and processes on each OS; annual load for 300 machines.
-
-The initial roadmap must now include hooks, replication, local commands, web roles, and consistent exports. Delivery order remains undecided; inclusion does not mean availability.
+The validated delivery order is recorded in [the roadmap](08-roadmap-validation.md). Add tests for concurrent profiles; machine-suspension precedence; suspended queued jobs; resumption without anchor drift; offline manual execution; failed pre-hook and cleanup; failed copy without new backup; per-profile retention isolation; verified/unverified TLS/private CA/mTLS; revoked token; LDAP and roles; export concurrent with DB writes and restoration; builds and processes on each OS; annual load for 300 machines.
