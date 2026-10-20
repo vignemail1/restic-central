@@ -1,66 +1,66 @@
-# Decision register
+# Registre des décisions
 
-Revision: 2026-10-19, following project-owner validation. Design phase, not production ready.
+Révision : 2026-10-19, après validation par le porteur du projet. Phase de conception, non prêt pour la production.
 
-REQUIREMENT: requested by the owner. ACCEPTED: explicitly validated. PROPOSED: not validated. SUPERSEDED: incompatible initial direction. OPEN: pending decision. PARTIALLY ACCEPTED: only the explicitly stated scope is validated.
+REQUIREMENT : demandé par le porteur. ACCEPTED : explicitement validé. PROPOSED : non validé. SUPERSEDED : orientation initiale incompatible, remplacée. OPEN : décision en attente. PARTIALLY ACCEPTED : seul le périmètre explicitement indiqué est validé.
 
-The [revised specifications](09-specifications-revisees.md) are the normative detailed reference for topics they cover. This register records decision status and history, not a competing specification. If a status here conflicts with a detailed rule, stop and resolve the discrepancy before implementation; do not infer acceptance from publication alone.
+Les [spécifications révisées](09-specifications-revisees.md) constituent la référence détaillée normative pour les sujets qu’elles couvrent. Ce registre consigne le statut et l’historique des décisions ; il ne constitue pas une spécification concurrente. Si un statut contredit une règle détaillée, interrompre l’implémentation et résoudre l’écart ; ne pas déduire une validation de la seule publication.
 
-## Requirements
+## Exigences
 
-E01 through E08 remain applicable: Restic, agents/server REST API, server scheduling, destinations and filesets, local lock, signaling jobs requiring inspection, 24-hour notifications, 7-day reporting, and non-production warning.
+E01 à E08 restent applicables : Restic, API REST agent/serveur, planification serveur, destinations et filesets, lock local, signalement des jobs nécessitant une inspection, notifications sur 24 heures, rapports sur 7 jours et avertissement de non-production.
 
-New requirements: multiple profiles per machine; machine/profile suspension and disabling; pre/post-hooks; configurable TLS verification; static multi-OS Go binaries; local manual execution; web interface with OpenLDAP and roles; consistent local server export; client-configured snapshot retention; primary backup followed by copy.
+Nouvelles exigences : plusieurs profiles par machine ; suspension et désactivation de la machine ou du profile ; pre-hooks/post-hooks ; vérification TLS configurable ; binaires Go statiques multi-OS ; exécution manuelle locale ; interface web avec OpenLDAP et rôles ; export local cohérent du serveur ; rétention des snapshots configurée côté client ; backup primaire suivi de copy.
 
-## P directions
+## Orientations P
 
-| ID | Status | Decision |
+| ID | Statut | Décision |
 |---|---|---|
-| P01 | ACCEPTED, AMENDED | Server owns enrolled-agent automatic scheduling; local manual execution is allowed. The validated delivery order starts with a locally configured agent using system crontab/systemd timer, then enrollment/reporting/configuration, and server scheduling. This does not approve independent autonomous scheduling for enrolled agents. |
-| P02 | ACCEPTED | Outbound HTTPS polling; no mandatory inbound agent network port. |
-| P03 | ACCEPTED | Immutable versioned configurations attached to jobs. |
-| P04 | ACCEPTED, LIMITED | Agent configuration excluding secrets is stored in a restricted filesystem hierarchy. Initially fnox may be used for secrets and secrets supplied to Restic/hooks at launch. Secure reboot retrieval is required across the stated hardware; integration, threat model, and injection details remain to specify. |
-| P05 | ACCEPTED | Persistent outbox, at-least-once delivery, and deduplication. |
-| P06 | ACCEPTED | Separate jobs, attempts, and per-destination results. |
-| P07 | SUPERSEDED, REPLACED | Independent backups are replaced by primary backup followed by copy. Current accepted result semantics: a successful primary with failed replication is partial. |
-| P08 | ACCEPTED, PARTIAL | A successful primary with failed replication is partial; failed post-hook after successful Restic backup is also partial. Preserve step-level outcomes. Combined failure/multiple-hook/replica aggregation remains open. |
-| P09 | ACCEPTED | Timeout: alert and inspection, no forced termination by default. |
-| P10 | PROPOSED | No automatic unlock based on timeout alone. |
-| P11 | ACCEPTED, EXTENDED | Agent/server in Go, static and multi-OS; previous Linux-only restrictions superseded. Supported target matrix remains to define and test. |
-| P12 | PARTIALLY SUPERSEDED | Hooks now in scope. HA and remote restore remain outside the proposed MVP. |
-| P13 | ACCEPTED | Immediate incidents, daily summary, and recovery notification. |
-| P14 | PROPOSED | Reports by scheduled occurrence, retries separate, missing metrics identified; no explicit owner validation found. |
+| P01 | ACCEPTED, AMENDED | Le serveur contrôle la planification automatique des agents enrôlés ; l’exécution manuelle locale est autorisée. L’ordre de livraison validé commence par un agent configuré localement via system crontab/systemd timer, puis ajoute enrôlement, reporting, configuration et planification serveur. Cela n’approuve pas une planification autonome indépendante pour les agents enrôlés. |
+| P02 | ACCEPTED | Polling HTTPS sortant ; aucun port réseau entrant obligatoire sur l’agent. |
+| P03 | ACCEPTED | Configurations immuables et versionnées, attachées aux jobs. |
+| P04 | ACCEPTED, LIMITED | La configuration de l’agent hors secrets est stockée dans une hiérarchie filesystem à accès restreint. fnox peut initialement être utilisé pour les secrets, fournis à Restic/hooks au lancement. La récupération sécurisée après reboot est requise sur le matériel visé ; l’intégration, le threat model et l’injection restent à spécifier. |
+| P05 | ACCEPTED | Outbox persistante, livraison at-least-once et déduplication. |
+| P06 | ACCEPTED | Jobs, tentatives et résultats par destination distincts. |
+| P07 | SUPERSEDED, REPLACED | Les backups indépendants sont remplacés par un backup primaire suivi de copy. Sémantique de résultat acceptée : un backup primaire réussi avec réplication échouée est partiel. |
+| P08 | ACCEPTED, PARTIAL | Un backup primaire réussi avec réplication échouée est partiel ; un post-hook échoué après un backup Restic réussi l’est également. Préserver les résultats par étape. L’agrégation des échecs combinés et des hooks/réplicas multiples reste ouverte. |
+| P09 | ACCEPTED | Timeout : alerte et inspection, sans arrêt forcé par défaut. |
+| P10 | PROPOSED | Aucun unlock automatique sur la seule base d’un timeout. |
+| P11 | ACCEPTED, EXTENDED | Agent/serveur en Go, statiques et multi-OS ; les anciennes restrictions Linux-only sont remplacées. La matrice des cibles prises en charge reste à définir et tester. |
+| P12 | PARTIALLY SUPERSEDED | Les hooks sont maintenant dans le périmètre. HA et restauration distante restent hors du MVP proposé. |
+| P13 | ACCEPTED | Incidents immédiats, récapitulatif quotidien et notification de rétablissement. |
+| P14 | PROPOSED | Rapports par occurrence planifiée, retries distincts et métriques manquantes identifiées ; aucune validation explicite du porteur n’a été trouvée. |
 
-## O decisions
+## Décisions O
 
-| ID | Status | Decision or remaining question |
+| ID | Statut | Décision ou question restante |
 |---|---|---|
-| O01 | ACCEPTED, PARTIAL | PostgreSQL is the server database; use a current stable release and provide a consistent, complete export enabling restoration after total database loss. Exact supported version/tooling remain to define. Agent-local persistence remains open. |
-| O02 | ACCEPTED | HTTPS/TLS with individual token; optional mTLS. |
-| O03 | OPEN | Minimum Restic version and compatibility matrix. |
-| O04 | ACCEPTED TARGET | One year of jobs for 300 machines; profiles, attempts, events, and load to size. Server RPO/RTO remain open. |
-| O05 | ACCEPTED SCHEDULING, PARTIAL | Server defines the next BackupJob. If its slot passes unretrieved, replace it with a new planned job. If another backup is running at the scheduled start, cancel the waiting job and report cancellation when possible with the already-running reason/state. Offline reconciliation and other job types remain open. Earlier exact catch-up and anchor rules remain as specified only where not in conflict. |
-| O06 | ACCEPTED, PARTIAL | Primary success plus failed replication is partial. Hook rules: required pre-hook must return 0 before Restic; without pre-hook Restic exit status decides backup success; without post-hook Restic success means job success; failed post-hook after successful Restic means partial. Preserve step results. Combined failures, multiple hooks/replicas and optional destinations remain open. |
-| O07 | ACCEPTED | Application consistency outside scope; hooks may prepare consistent files without a product-level application guarantee. |
-| O08 | ACCEPTED, PARTIAL | Retention is configured through client Restic directives, with operator choosing policy. Expired non-replicated snapshots may be deleted. Cached forget/prune jobs execute offline and persist results in Outbox. Directive mapping, isolation, schedule and stale-job safeguards remain to specify before destructive use. |
-| O09 | ACCEPTED, PARTIAL | Operator interface, OpenLDAP `posixAccount` users with configurable search filter, local accounts including a superadmin, and audit of every operator action (including login/logout, changes, creation, agent enrollment). Roles, recovery, LDAP details, audit protection/retention remain to specify. Consistent export is also accepted under O01. |
-| O10 | OPEN | License, distribution, and updates; static multi-OS Go requirement accepted. |
-| O11 | ACCEPTED, EXTENDED | Primary backup followed by copy; enrolled-agent server scheduling remains authoritative. Initial development stage may run a locally configured agent via OS timer/crontab before enrollment. |
-| O12 | ACCEPTED, PARTIAL | Agent/server exchanges and agent configuration use versioned JSON schemas; Restic JSON is nested/preserved in server-defined contracts, not itself the API contract. Schema negotiation, compatibility and validation details remain to define. |
+| O01 | ACCEPTED, PARTIAL | PostgreSQL est la base du serveur ; utiliser une version stable actuelle et fournir un export cohérent et complet permettant une restauration après perte totale de la base. Version et outils exacts à définir. Persistance locale de l’agent encore ouverte. |
+| O02 | ACCEPTED | HTTPS/TLS avec token individuel ; mTLS facultatif. |
+| O03 | OPEN | Version minimale de Restic et matrice de compatibilité. |
+| O04 | ACCEPTED TARGET | Un an de jobs pour 300 machines ; dimensionner profiles, tentatives, événements et charge. RPO/RTO du serveur encore ouverts. |
+| O05 | ACCEPTED SCHEDULING, PARTIAL | Le serveur définit le prochain BackupJob. Si le créneau passe sans récupération par l’agent, remplacer le job prévisionnel. Si un autre backup est en cours à l’heure prévue, annuler le job en attente et signaler l’annulation si possible avec le motif/état indiquant qu’un job est déjà en cours. Réconciliation hors ligne et autres types de jobs encore ouverts. Les règles antérieures de rattrapage et d’ancrage restent applicables uniquement lorsqu’elles ne sont pas contradictoires. |
+| O06 | ACCEPTED, PARTIAL | Réussite primaire et réplication échouée = partiel. Règles des hooks : le pre-hook requis doit retourner 0 avant Restic ; sans pre-hook, le code de sortie Restic décide de la réussite du backup ; sans post-hook, la réussite de Restic signifie réussite du job ; post-hook échoué après Restic réussi = partiel. Préserver les résultats par étape. Échecs combinés, hooks/réplicas multiples et destinations facultatives restent ouverts. |
+| O07 | ACCEPTED | Cohérence applicative hors périmètre ; des hooks peuvent préparer des fichiers cohérents sans garantie applicative du produit. |
+| O08 | ACCEPTED, PARTIAL | Rétention configurée via les directives Restic côté client, l’opérateur choisit la policy. Un snapshot expiré non répliqué peut être supprimé. Les jobs `forget`/`prune` mis en cache s’exécutent hors ligne et persistent leurs résultats dans l’Outbox. Correspondance des directives, isolation, schedule et garde-fous contre les jobs obsolètes à préciser avant toute opération destructive. |
+| O09 | ACCEPTED, PARTIAL | Interface opérateur, utilisateurs OpenLDAP `posixAccount` avec filtre de recherche configurable, comptes locaux dont un superadmin, audit de chaque action opérateur (login/logout, modifications, créations, enrôlement d’agent inclus). Rôles, récupération, détails LDAP, protection/rétention de l’audit restent à préciser. Export cohérent également accepté sous O01. |
+| O10 | OPEN | Licence, distribution et mises à jour ; exigence de Go statique multi-OS acceptée. |
+| O11 | ACCEPTED, EXTENDED | Backup primaire suivi de copy ; le serveur reste l’autorité de planification des agents enrôlés. La première étape de développement peut exécuter un agent configuré localement via timer OS/crontab avant enrôlement. |
+| O12 | ACCEPTED, PARTIAL | Les échanges agent/serveur et la configuration agent utilisent des schémas JSON versionnés ; le JSON Restic est imbriqué/préservé dans les contrats définis par le serveur, sans constituer le contrat API lui-même. Négociation de schéma, compatibilité et validation à définir. |
 
-## Additional validated decisions
+## Autres décisions validées
 
-- Delivery sequence and stage gates are recorded in [validated development decisions](16-decisions-for-development.md) and [roadmap](08-roadmap-validation.md).
-- A planned BackupJob not retrieved before its slot expires is replaced; a due job is canceled rather than launched concurrently with an already-running backup, with cancellation reported when possible.
-- Operator authentication initially supports OpenLDAP `posixAccount` search and local accounts including superadmin; all operator actions are audited.
-- No implementation, test pass, security review, or production readiness is implied by acceptance of design decisions.
+- L’ordre de livraison et les critères d’étape sont consignés dans les [décisions validées pour le développement](16-decisions-for-development.md) et la [feuille de route](08-roadmap-validation.md).
+- Un BackupJob planifié non récupéré avant expiration de son créneau est remplacé ; un job arrivé à échéance est annulé plutôt que lancé en parallèle d’un backup déjà en cours, et l’annulation est remontée si possible.
+- L’authentification opérateur prend initialement en charge la recherche OpenLDAP `posixAccount` et les comptes locaux dont un superadmin ; toutes les actions opérateur sont auditées.
+- Aucune implémentation, réussite de tests, revue de sécurité ou aptitude à la production ne découle de l’acceptation des décisions de conception.
 
-## History and consequences
+## Historique et conséquences
 
-P02, P03, P05, P06, P09, P11, and P13 were explicitly validated previously. The owner subsequently validated the scoped changes recorded above; adjacent proposals remain unaccepted unless explicitly listed.
+P02, P03, P05, P06, P09, P11 et P13 ont été explicitement validées précédemment. Le porteur a ensuite validé les changements de périmètre consignés ci-dessus ; les propositions adjacentes restent non acceptées sauf indication explicite.
 
-Hooks increase privileges and execution exposure: provide structured commands, local restrictions, time limits, and audit. Unverified TLS is possible but must be clearly marked as degraded. Local execution requires the same locking engine and idempotent server reconciliation.
+Les hooks augmentent les privilèges et l’exposition à l’exécution : fournir des commandes structurées, restrictions locales, limites de durée et audit. TLS sans vérification est possible, mais doit être clairement signalé comme dégradé. L’exécution locale nécessite le même moteur de lock et une réconciliation serveur idempotente.
 
-Server downtime prevents new centrally triggered executions but must not prevent local manual execution using available configuration. Copy failure must not unnecessarily reread sources.
+Une panne du serveur empêche les nouvelles exécutions déclenchées centralement, mais ne doit pas empêcher une exécution manuelle locale avec une configuration disponible. Un échec de copy ne doit pas provoquer inutilement une nouvelle lecture des sources.
 
-Future decisions must include context, alternatives, owner, date, and consequences; retain superseded decisions.
+Toute décision future doit inclure contexte, alternatives, porteur, date et conséquences ; conserver les décisions remplacées.

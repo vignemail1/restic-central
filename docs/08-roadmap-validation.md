@@ -1,44 +1,44 @@
-# Roadmap and validation strategy
+# Feuille de route et stratégie de validation
 
-Status: delivery order validated by the project owner on 2026-10-19; no milestone completed, implementation delivered, or deadline guaranteed. Decisions are recorded in [the decision register](07-decisions.md) and [validated development decisions](16-decisions-for-development.md). Each step has its own tests and acceptance criteria. The project remains design-only and NOT PRODUCTION READY until implementation and explicit qualification.
+Statut : ordre de livraison validé par le porteur du projet le 2026-10-19 ; aucune étape n’est terminée, aucune implémentation n’est livrée et aucune échéance n’est garantie. Les décisions sont consignées dans le [registre des décisions](07-decisions.md) et les [décisions validées pour le développement](16-decisions-for-development.md). Chaque étape possède ses propres tests et critères d’acceptation. Le projet reste en conception et **NON PRÊT POUR LA PRODUCTION** jusqu’à son implémentation et sa qualification explicite.
 
-## Delivery sequence
+## Ordre de livraison
 
-1. **Autonomous agent:** manually supplied configuration, hooks, execution through system crontab or systemd timer, and durable job-state records in the Outbox. No server enrollment is required in this step.
-2. **Server enrollment:** implement server-side agent enrollment.
-3. **Agent enrollment:** add agent-side enrollment.
-4. **Server job reporting:** implement server receipt and persistence of job information.
-5. **Agent job reporting:** add agent delivery of job information through the Outbox.
-6. **Server agent configuration:** implement server-side configuration management and delivery.
-7. **Agent auto-configuration:** fetch and apply configuration from the configuration endpoint.
-8. **Server scheduling:** implement server-managed scheduling and future BackupJob assignment.
+1. **Agent autonome :** configuration fournie manuellement, hooks, exécution via system crontab ou systemd timer, et enregistrement durable des états de jobs dans l’Outbox. Aucun enrôlement auprès du serveur n’est requis pour cette étape.
+2. **Enrôlement serveur :** implémenter la gestion de l’enrôlement des agents côté serveur.
+3. **Enrôlement agent :** ajouter la gestion de l’enrôlement côté agent.
+4. **Reporting serveur des jobs :** implémenter la réception et la persistance des informations de jobs côté serveur.
+5. **Reporting agent des jobs :** ajouter l’envoi des informations de jobs par l’agent via l’Outbox.
+6. **Configuration des agents côté serveur :** implémenter la gestion et la distribution de configuration côté serveur.
+7. **Auto-configuration de l’agent :** récupérer et appliquer la configuration depuis l’endpoint dédié.
+8. **Planification serveur :** implémenter la planification gérée par le serveur et l’affectation future des BackupJobs.
 
-“Autonomous” in step 1 refers to locally configured execution using the operating-system timer/crontab, not approval for a separate autonomous scheduling mode in the enrolled system. Hooks are in scope from step 1. Retention jobs must not be enabled until their destructive-operation safeguards and acceptance tests are satisfied.
+« Autonome » à l’étape 1 désigne une exécution configurée localement via le timer/crontab du système d’exploitation ; cela n’approuve pas un mode de planification autonome distinct dans le système enrôlé. Les hooks sont inclus dès l’étape 1. Les jobs de rétention ne doivent pas être activés avant que leurs garde-fous contre les opérations destructives et leurs tests d’acceptation soient satisfaits.
 
-## Step exit gates
+## Critères de sortie des étapes
 
-Each step must define and pass its own tests before the next integration is treated as complete. At minimum:
+Chaque étape doit définir et réussir ses propres tests avant que l’intégration suivante soit considérée comme achevée. Au minimum :
 
-- **1 — Agent:** configuration validation; pre-hook failure prevents Restic; Restic and post-hook exit-code aggregation according to the validated rules; partial results for failed replication and failed post-hook after successful backup; machine lock; timer/crontab invocation; Outbox durability across restart and server outage; no secret leakage.
-- **2–3 — Enrollment:** authentication, identity binding, duplicate/re-enrollment behavior, revocation/replacement, and failure/retry tests on both server and agent sides.
-- **4–5 — Reporting:** versioned-contract validation, idempotent at-least-once delivery, duplicate/out-of-order events, transactional persistence-before-acknowledgment, offline queueing, and reconnect reconciliation.
-- **6–7 — Configuration:** versioned JSON schema validation, immutable configuration revisions, endpoint authorization, compatible/unsupported schema behavior, safe persistence without secrets, and agent restart/reload behavior.
-- **8 — Scheduling:** stable occurrence identity, replacement of an unretrieved expired planned job, machine-wide serialization, cancellation reporting when another backup is running, offline/reconnect behavior, and timestamp/time-zone boundaries.
+- **1 — Agent :** validation de configuration ; l’échec d’un pre-hook empêche Restic ; agrégation des codes de sortie Restic/post-hook selon les règles validées ; résultats partiels en cas de réplication échouée ou de post-hook échoué après un backup réussi ; lock machine ; invocation timer/crontab ; durabilité de l’Outbox après redémarrage et panne serveur ; absence de fuite de secrets.
+- **2–3 — Enrôlement :** authentification, liaison d’identité, comportement en cas de doublon/réenrôlement, révocation/remplacement et tests d’échec/retry côté serveur et agent.
+- **4–5 — Reporting :** validation des contrats versionnés, livraison idempotente at-least-once, événements doublonnés/hors ordre, persistance transactionnelle avant accusé de réception, mise en file hors ligne et réconciliation à la reconnexion.
+- **6–7 — Configuration :** validation des schémas JSON versionnés, révisions de configuration immuables, autorisation de l’endpoint, gestion des schémas compatibles/non pris en charge, persistance sûre sans secrets et comportement de redémarrage/rechargement de l’agent.
+- **8 — Planification :** identité stable des occurrences, remplacement d’un job planifié expiré et non récupéré, sérialisation à l’échelle de la machine, remontée de l’annulation lorsqu’un autre backup est en cours, comportement hors ligne/reconnexion et limites de timestamps/fuseaux horaires.
 
-Before declaring the whole system ready for operational use, also test offline `forget`/`prune` with Outbox delivery, retention isolation and stale-job safeguards, failed replication and post-hook partial status, full PostgreSQL export restoration, OpenLDAP `posixAccount` search and local superadmin, complete operator audit, supported OS/architecture builds, and recovery scenarios. Do not claim production readiness from phase completion alone.
+Avant de déclarer le système prêt à l’exploitation, tester aussi `forget`/`prune` hors ligne avec livraison Outbox, l’isolation de la rétention et les garde-fous contre les jobs obsolètes, les statuts partiels de réplication et post-hook échoués, la restauration complète d’un export PostgreSQL, la recherche OpenLDAP `posixAccount` et le superadmin local, l’audit complet des opérateurs, les builds pour les OS/architectures pris en charge et les scénarios de reprise. Ne pas revendiquer l’aptitude à la production sur la seule base de l’achèvement des étapes.
 
-## Cross-cutting test strategy
+## Stratégie de tests transversale
 
-- **Unit:** configuration and schema validation, Restic argument compilation, exit-code translation, hook gating, result aggregation, state transitions, occurrence identity, retention mapping, and time calculations.
-- **Contract:** authentication/authorization, version compatibility and unsupported versions, idempotence, pagination where applicable, invalid and oversized payloads, unknown fields, and out-of-order events.
-- **Integration:** actual Restic binary and disposable repository; backup, hook execution, copy, check, forget/prune, and restore. Use synthetic data only.
-- **Resilience:** API outage after Restic finishes, crash before/after acknowledgment, duplicates, full disk, agent restart, stale planned jobs, unavailable secrets, expired/revoked credentials, and late results.
-- **Concurrency:** simultaneous requests, multiple profiles under machine-wide locking, restart during backup, multiple scheduler workers, and concurrent maintenance.
-- **Security:** secret leakage, filesystem permissions, safe secret injection, unauthorized paths/URLs, payload limits, token rotation/revocation, LDAP/local role enforcement, audit coverage, and cross-agent isolation.
-- **Database/export:** migration compatibility, concurrent writes during export, complete dump and configuration recovery after total database loss, and restore without replaying historical jobs.
+- **Unitaires :** validation de configuration et de schéma, compilation des arguments Restic, traduction des codes de sortie, conditions d’exécution des hooks, agrégation des résultats, transitions d’état, identité des occurrences, correspondance de rétention et calculs de temps.
+- **Contrat :** authentification/autorisation, compatibilité des versions et versions non prises en charge, idempotence, pagination le cas échéant, payloads invalides ou trop volumineux, champs inconnus et événements hors ordre.
+- **Intégration :** véritable binaire Restic et repository jetable ; backup, exécution des hooks, copy, check, forget/prune et restore. Utiliser uniquement des données synthétiques.
+- **Résilience :** panne API après la fin de Restic, crash avant/après acquittement, doublons, disque plein, redémarrage agent, jobs planifiés obsolètes, secrets indisponibles, credentials expirés/révoqués et résultats tardifs.
+- **Concurrence :** requêtes simultanées, plusieurs profiles avec lock à l’échelle de la machine, redémarrage pendant un backup, plusieurs workers scheduler et maintenance concurrente.
+- **Sécurité :** fuite de secrets, permissions filesystem, injection sûre des secrets, chemins/URLs non autorisés, limites de payload, rotation/révocation des tokens, contrôle des rôles LDAP/locaux, couverture d’audit et isolation inter-agents.
+- **Base/export :** compatibilité des migrations, écritures concurrentes pendant l’export, dump complet et récupération de configuration après perte totale de la base, restauration sans rejouer les jobs historiques.
 
-## Operational quality controls
+## Contrôles qualité opérationnels
 
-For Go: formatting, `go vet`, tests, race detector, and configured linting. For any added Bash: ShellCheck. For documentation: Markdown lint, JSON schema validation, relative-link checks, and secret detection. CI should run the applicable controls; no test or lint results are currently claimed.
+Pour Go : formatage, `go vet`, tests, race detector et linting configuré. Pour tout Bash ajouté : ShellCheck. Pour la documentation : Markdown lint, validation des schémas JSON, vérification des liens relatifs et détection de secrets. La CI doit exécuter les contrôles applicables ; aucun résultat de test ou lint n’est actuellement revendiqué.
 
-Production qualification additionally requires security review, contract/version compatibility, documented migrations and rollback, restore tests, observability, reproducible installation, operator/incident procedures, and an explicit production-readiness decision.
+La qualification de production exige aussi une revue de sécurité, la compatibilité des contrats/versions, des migrations et procédures de rollback documentées, des tests de restore, l’observabilité, une installation reproductible, des procédures opérateur/incidents et une décision explicite d’aptitude à la production.

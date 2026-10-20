@@ -1,77 +1,77 @@
-# Validated development decisions
+# Décisions validées pour le développement
 
-Date: 2026-10-19. Status: design decisions validated by the project owner; no implementation or tests are implied. This document supplements [the revised specifications](09-specifications-revisees.md) and [the decision register](07-decisions.md). Where it makes a more specific decision, update the register and related specifications in the same change. Do not treat unresolved details below as approved.
+Date : 2026-10-19. Statut : décisions de conception validées par le porteur du projet ; aucune implémentation ni réussite de tests n’est implicite. Ce document complète les [spécifications révisées](09-specifications-revisees.md) et le [registre des décisions](07-decisions.md). Lorsqu’il précise une décision, mettre à jour le registre et les spécifications associées dans la même modification. Ne pas considérer les détails non résolus ci-dessous comme approuvés.
 
-## 1. Delivery sequence
+## 1. Ordre de livraison
 
-Development is incremental; each step must have its own tests and acceptance criteria. The agreed order is:
+Le développement est incrémental ; chaque étape doit avoir ses propres tests et critères d’acceptation. L’ordre convenu est :
 
-1. **Autonomous agent:** manually supplied configuration, hooks, execution via system crontab or systemd timer, and durable job-state records in the Outbox.
-2. **Server enrollment:** implement server-side agent enrollment.
-3. **Agent enrollment:** add agent-side enrollment.
-4. **Server job reporting:** implement server receipt and persistence of job information.
-5. **Agent job reporting:** add agent delivery of job information through the Outbox.
-6. **Server agent configuration:** implement server-side configuration management and delivery.
-7. **Agent auto-configuration:** fetch and apply configuration from the configuration endpoint.
-8. **Server scheduling:** implement server-managed scheduling and future BackupJob assignment.
+1. **Agent autonome :** configuration fournie manuellement, hooks, exécution via system crontab ou systemd timer, et enregistrement durable des états de jobs dans l’Outbox.
+2. **Enrôlement serveur :** implémenter la gestion de l’enrôlement des agents côté serveur.
+3. **Enrôlement agent :** ajouter la gestion de l’enrôlement côté agent.
+4. **Reporting serveur des jobs :** implémenter la réception et la persistance des informations de jobs côté serveur.
+5. **Reporting agent des jobs :** ajouter l’envoi des informations de jobs par l’agent via l’Outbox.
+6. **Configuration des agents côté serveur :** implémenter la gestion et la distribution de configuration côté serveur.
+7. **Auto-configuration de l’agent :** récupérer et appliquer la configuration depuis l’endpoint dédié.
+8. **Planification serveur :** implémenter la planification gérée par le serveur et l’affectation future des BackupJobs.
 
-The term “autonomous agent” in step 1 means locally configured execution without server enrollment or server scheduling; it does not approve an autonomous server-independent scheduling mode beyond the specified system timer/crontab use.
+Le terme « agent autonome » à l’étape 1 signifie une exécution configurée localement sans enrôlement ni planification serveur ; il n’approuve pas de mode de planification autonome indépendant du serveur au-delà de l’utilisation spécifiée du system timer/crontab.
 
-## 2. BackupJob result semantics
+## 2. Sémantique des résultats de BackupJob
 
-- A job is **partial** when the primary backup succeeds but replication fails.
-- If no pre-hook is configured, the Restic backup exit status determines whether the backup operation succeeds.
-- If a pre-hook is configured, it must return exit code 0 before the Restic backup is started. A failed pre-hook prevents the backup phase.
-- If no post-hook is configured, the job succeeds when Restic succeeds.
-- If a post-hook is configured, the job succeeds when the post-hook returns 0; if the post-hook fails after a successful Restic backup, the job is partial.
-- Preserve individual hook, primary-backup, and replication results; aggregate job status must not erase step-level outcomes.
+- Un job est **partiel** lorsque le backup primaire réussit mais que la réplication échoue.
+- Si aucun pre-hook n’est configuré, le code de sortie du backup Restic détermine si l’opération de backup réussit.
+- Si un pre-hook est configuré, il doit retourner le code de sortie 0 avant le démarrage de Restic. Un pre-hook échoué empêche la phase de backup.
+- Si aucun post-hook n’est configuré, le job réussit lorsque Restic réussit.
+- Si un post-hook est configuré, le job réussit lorsque le post-hook retourne 0 ; si le post-hook échoue après un backup Restic réussi, le job est partiel.
+- Préserver les résultats individuels des hooks, du backup primaire et de la réplication ; le statut agrégé du job ne doit pas effacer les résultats par étape.
 
-The precise status when the primary backup itself fails and a post-hook also fails, and the behavior when multiple hooks or replicas exist, still require explicit specification before implementation of aggregation.
+Le statut précis lorsque le backup primaire échoue et que le post-hook échoue aussi, ainsi que le comportement avec plusieurs hooks ou réplicas, nécessitent encore une spécification explicite avant l’implémentation de l’agrégation.
 
-## 3. Server-planned BackupJobs
+## 3. BackupJobs planifiés par le serveur
 
-- The server defines the next BackupJob for an agent.
-- If its scheduled slot passes before the agent retrieves that planned job, the server replaces it with a new planned job for the new slot; the stale planned job must not remain executable.
-- If a backup is already running when another scheduled job is due to start, the waiting job is marked canceled and the agent reports that cancellation to the server when possible, with a reason/state indicating that another job is already running.
+- Le serveur définit le prochain BackupJob d’un agent.
+- Si son créneau planifié passe avant que l’agent récupère ce job planifié, le serveur le remplace par un nouveau job planifié pour le nouveau créneau ; l’ancien job planifié ne doit plus rester exécutable.
+- Si un backup est déjà en cours au moment où un autre job planifié doit démarrer, le job en attente est marqué annulé et l’agent transmet cette annulation au serveur lorsque possible, avec un motif/état indiquant qu’un autre job est déjà en cours.
 
-This rule does not define behavior for manually requested jobs, non-backup job types, or an agent offline throughout replacement; specify those cases and idempotent cancellation/reconciliation before implementation. Cancellation of a planned job must not be confused with killing a running process.
+Cette règle ne définit pas le comportement des jobs demandés manuellement, des types de jobs autres que le backup, ni d’un agent resté hors ligne pendant le remplacement ; spécifier ces cas et la réconciliation/annulation idempotente avant implémentation. L’annulation d’un job planifié ne doit pas être confondue avec l’arrêt d’un processus actif.
 
-## 4. Retention and offline maintenance
+## 4. Rétention et maintenance hors ligne
 
-- Retention is client configuration expressed through Restic directives; the operator chooses the retention policy.
-- An expired snapshot that has not been replicated is considered no longer valid and may be deleted under that configured policy.
-- Agent-cached `forget` and `prune` jobs execute even when the server is unreachable. Their results are persisted to the Outbox and delivered when connectivity returns.
+- La rétention est une configuration client exprimée par des directives Restic ; l’opérateur choisit la policy de rétention.
+- Un snapshot expiré qui n’a pas été répliqué est considéré comme n’étant plus valide et peut être supprimé selon la policy configurée.
+- Les jobs `forget` et `prune` mis en cache par l’agent s’exécutent même lorsque le serveur est injoignable. Leurs résultats sont persistés dans l’Outbox et transmis lorsque la connectivité revient.
 
-The exact Restic directive mapping, profile/repository isolation, pruning schedule, and safeguards against stale or superseded cached jobs must be specified and tested before enabling destructive operations.
+La correspondance exacte des directives Restic, l’isolation par profile/repository, le schedule de prune et les garde-fous contre les jobs mis en cache obsolètes ou remplacés doivent être spécifiés et testés avant d’activer des opérations destructives.
 
-## 5. Agent configuration and secrets
+## 5. Configuration de l’agent et secrets
 
-- Agent configuration other than secrets is stored in a filesystem hierarchy with restricted access.
-- Secret storage must support secure retrieval after a client-machine reboot, including legacy BIOS systems without a TPM, UEFI systems, physical servers, and virtual machines.
-- Initially, the project may rely on [fnox](https://fnox.jdx.dev/) for secret storage and provide secrets to Restic or hooks at process launch.
+- La configuration de l’agent hors secrets est stockée dans une hiérarchie filesystem à accès restreint.
+- Le stockage des secrets doit permettre une récupération sécurisée après le reboot d’une machine cliente, y compris les systèmes BIOS legacy sans TPM, systèmes UEFI, serveurs physiques et machines virtuelles.
+- Initialement, le projet peut s’appuyer sur [fnox](https://fnox.jdx.dev/) pour le stockage des secrets et fournir les secrets à Restic ou aux hooks au lancement du processus.
 
-Before implementation, define the supported fnox integration and version, threat model, file/permission requirements, secret injection mechanism that avoids command-line and log exposure, and behavior when secrets cannot be unlocked after reboot. This decision does not claim that fnox has been integrated or independently security-reviewed.
+Avant implémentation, définir l’intégration fnox prise en charge et sa version, le threat model, les exigences de fichiers/permissions, le mécanisme d’injection évitant l’exposition dans la ligne de commande et les logs, ainsi que le comportement si les secrets ne peuvent pas être déverrouillés après reboot. Cette décision ne prétend pas que fnox est intégré ou a fait l’objet d’une revue de sécurité indépendante.
 
-## 6. Versioned JSON contracts
+## 6. Contrats JSON versionnés
 
-- Agent/server exchanges use versioned JSON data schemas. Every exchange must identify a schema version sufficient to agree on semantics; compatible evolution and unsupported-version behavior must be defined.
-- Restic JSON output is not itself the server contract. Relevant Restic JSON data must be included as a nested/preserved payload in the server-defined schema so changes in Restic JSON can be tolerated without making raw Restic output the API contract.
-- Agent configuration also follows a JSON schema.
-- API contracts must cover the different actions, including backup, check, configuration, and enrollment, as well as job reporting and other supported operations.
+- Les échanges agent/serveur utilisent des schémas de données JSON versionnés. Chaque échange doit identifier une version de schéma suffisante pour s’accorder sur la sémantique ; l’évolution compatible et le comportement face aux versions non prises en charge doivent être définis.
+- La sortie JSON de Restic ne constitue pas à elle seule le contrat serveur. Les données JSON Restic pertinentes doivent être incluses dans un payload imbriqué/préservé au sein du schéma défini par le serveur afin de tolérer les changements de Restic sans faire de sa sortie brute le contrat API.
+- La configuration agent suit également un schéma JSON.
+- Les contrats API couvrent les différentes actions, notamment backup, check, configuration et enrôlement, ainsi que le reporting des jobs et les autres opérations prises en charge.
 
-Define schema ownership, version negotiation, validation, forward/backward compatibility, unknown fields, payload limits, and raw Restic payload retention/redaction. Publish schemas and contract tests before implementing the corresponding endpoints.
+Définir la propriété des schémas, la négociation de version, la validation, la compatibilité avant/arrière, les champs inconnus, les limites de payload et la rétention/redaction du payload Restic brut. Publier les schémas et tests de contrat avant d’implémenter les endpoints correspondants.
 
-## 7. PostgreSQL, export, and operator access
+## 7. PostgreSQL, export et accès opérateur
 
-- Use a current stable PostgreSQL release; record the exact supported/tested version range when selecting it for implementation.
-- Server export must be consistent and sufficient to restore the complete server PostgreSQL state from the dump after total database loss. Coordinate the database dump with the server configuration and recovery material as required by the existing export specification; test full restoration.
-- Initially, OpenLDAP authorization targets users using the `posixAccount` schema and a configurable search filter. Local accounts must also be supported, including a local superadmin account.
-- Audit every operator action, including login, logout, modification, creation, and agent enrollment. Define a tamper-resistant-enough audit persistence and retention policy; never log credentials or secret values.
+- Utiliser une version stable actuelle de PostgreSQL ; consigner la plage exacte des versions prises en charge/testées au moment du choix d’implémentation.
+- L’export serveur doit être cohérent et suffisant pour restaurer l’état PostgreSQL complet du serveur à partir du dump après une perte totale de la base. Coordonner le dump avec la configuration serveur et le matériel de reprise requis par la spécification d’export existante ; tester la restauration complète.
+- Initialement, l’autorisation OpenLDAP cible les utilisateurs utilisant le schéma `posixAccount` et un filtre de recherche configurable. Les comptes locaux doivent aussi être pris en charge, notamment un compte superadmin local.
+- Auditer chaque action opérateur, y compris login, logout, modification, création et enrôlement d’agent. Définir une persistance et une rétention d’audit suffisamment résistantes à l’altération ; ne jamais consigner credentials ou valeurs de secrets.
 
-This does not choose a PostgreSQL major version, LDAP filter syntax/defaults, local-account recovery flow, password policy, role granularity, or export tooling. Those details require specification and tests.
+Cela ne choisit ni une version majeure de PostgreSQL, ni la syntaxe/valeur par défaut du filtre LDAP, ni le mécanisme de récupération de compte local, la policy de mot de passe, la granularité des rôles ou les outils d’export. Ces détails exigent spécification et tests.
 
-## 8. Tests and gates
+## 8. Tests et critères de passage
 
-Each delivery step above has unit, integration, and failure-path tests appropriate to its scope. In particular, tests must cover Outbox durability across restart and server outage; hook exit-code gating; partial status for failed replication/post-hook; planned-job replacement and cancellation reporting; offline `forget`/`prune` result delivery; schema-version validation; full PostgreSQL restore; LDAP/local authentication; and audit coverage without secret leakage.
+Chaque étape de livraison ci-dessus possède des tests unitaires, d’intégration et de chemins d’échec adaptés à son périmètre. En particulier, tester la durabilité de l’Outbox après redémarrage et panne serveur ; le contrôle des codes de sortie des hooks ; le statut partiel en cas de réplication/post-hook échoué ; le remplacement des jobs planifiés et le reporting de leur annulation ; la livraison des résultats `forget`/`prune` hors ligne ; la validation des versions de schéma ; la restauration PostgreSQL complète ; l’authentification LDAP/locale ; et la couverture d’audit sans fuite de secrets.
 
-No development step is complete merely because the feature compiles. Do not enable destructive retention in production-like environments until isolation, stale-job handling, and restore/recovery tests pass.
+Une étape de développement n’est pas terminée simplement parce que la fonctionnalité compile. Ne pas activer la rétention destructive dans des environnements proches de la production avant la réussite des tests d’isolation, de gestion des jobs obsolètes et de reprise/restauration.

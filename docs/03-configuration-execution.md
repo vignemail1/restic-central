@@ -1,16 +1,16 @@
-# Configuration and execution
+# Configuration et exécution
 
-Status: initial design, retained for historical context. Where this document conflicts with [the revised specifications](09-specifications-revisees.md), the revised specifications take precedence. This document is not an independent source of current requirements.
+Statut : conception initiale conservée à titre historique. En cas de conflit avec les [spécifications révisées](09-specifications-revisees.md), celles-ci prévalent. Ce document n’est pas une source indépendante d’exigences actuelles.
 
-For canonical terminology, see the [domain glossary](14-glossaire.md). For conceptual relationships, see [models, relationships, and invariants](15-modeles-relations.md).
+Pour la terminologie canonique, consulter le [glossaire du domaine](14-glossaire.md). Pour les relations conceptuelles, consulter [modèles, relations et invariants](15-modeles-relations.md).
 
-## Configuration separation
+## Séparation de la configuration
 
-Agent configuration: identity, server endpoint, authentication, local storage paths, Restic binary, and local limits.
+Configuration de l’agent : identité, endpoint serveur, authentification, chemins de stockage local, binaire Restic et limites locales.
 
-The initial design described a backup policy with sources, exclusions, repositories, central schedule, constraints, time limits, and optional retention. Current profile requirements are specified in document 09; retain this distinction between historical names and current terminology.
+La conception initiale décrivait une policy de sauvegarde avec sources, exclusions, repositories, schedule central, contraintes, limites de durée et rétention facultative. Les exigences actuelles relatives aux profiles sont définies dans le document 09 ; conserver la distinction entre les anciens noms et la terminologie actuelle.
 
-## Illustrative example (historical)
+## Exemple illustratif (historique)
 
 ```yaml
 schema_version: 1
@@ -43,55 +43,55 @@ schedule:
   catch_up: latest_only
 ```
 
-Fields and values are provisional. This historical example uses cron and independent destinations, both superseded by document 09 where applicable. Its time limits are not suitable defaults for every environment. Any future configuration format, exclusion semantics, and translation to Restic arguments must be specified and tested.
+Les champs et valeurs sont provisoires. Cet exemple historique utilise cron et des destinations indépendantes, tous deux remplacés par le document 09 lorsque applicable. Ses limites de durée ne conviennent pas par défaut à tous les environnements. Tout futur format de configuration, sémantique des exclusions et traduction en arguments Restic doivent être spécifiés et testés.
 
-## Prerequisites
+## Prérequis
 
-Check required paths, permissions, and expected mounts; do not silently back up an empty directory standing in for a missing volume. Define behavior for each optional or required source.
+Vérifier les chemins requis, les permissions et les mounts attendus ; ne pas sauvegarder silencieusement un répertoire vide qui remplacerait un volume manquant. Définir le comportement pour chaque source facultative ou obligatoire.
 
-Define whether backups stay within one filesystem and how symbolic links are handled. For application data, plan consistent dumps or snapshots. Files being modified do not guarantee database consistency.
+Définir si les sauvegardes restent dans un seul filesystem et comment les liens symboliques sont traités. Pour les données applicatives, prévoir des dumps ou snapshots cohérents. Des fichiers en cours de modification ne garantissent pas la cohérence d’une base de données.
 
-Hook behavior and safety requirements are covered by document 09; do not treat the initial MVP exclusion as current. Any implementation needs an allowlist, restricted environment, timeout, error handling, and cleanup rules even after failure.
+Le comportement et les exigences de sécurité des hooks sont couverts par le document 09 ; ne pas considérer comme actuelle leur exclusion initiale du MVP. Toute implémentation nécessite une allowlist, un environnement restreint, un timeout, la gestion des erreurs et des règles de cleanup même en cas d’échec.
 
-## Multiple destinations
+## Destinations multiples
 
-The initial design considered independent backups per repository and sequential destinations. This is superseded by the primary-backup-then-copy direction in document 09. Success aggregation, required versus optional destinations, and incomplete snapshots remain topics to resolve as indicated in the revised specifications and decision register.
+La conception initiale envisageait des sauvegardes indépendantes par repository et des destinations séquentielles. Cette approche est remplacée par la direction « backup primaire puis copy » du document 09. L’agrégation des statuts, les destinations obligatoires ou facultatives et les snapshots incomplets restent à résoudre selon les spécifications révisées et le registre des décisions.
 
-Retries should target only necessary operations, preserve traceability, and account for the possibility that another attempt creates a new snapshot.
+Les retries doivent cibler uniquement les opérations nécessaires, préserver la traçabilité et tenir compte du fait qu’une autre tentative peut créer un nouveau snapshot.
 
-## Running Restic
+## Exécution de Restic
 
-Start the process with structured arguments and a controlled environment, without shell-command concatenation. Collect JSON stdout and stderr separately. Preserve the exit code, Restic version, and final summary.
+Démarrer le processus avec des arguments structurés et un environnement contrôlé, sans concaténer des commandes shell. Collecter séparément stdout JSON et stderr. Préserver le code de sortie, la version de Restic et le résumé final.
 
-For backup, distinguish complete success from an incomplete snapshot: exit code 3 must not be treated as complete success. Exit-code mappings and JSON fields must be checked against every supported Restic version. Do not apply backup rules indiscriminately to check, copy, or prune.
+Pour un backup, distinguer une réussite complète d’un snapshot incomplet : le code de sortie 3 ne doit pas être traité comme une réussite complète. Les correspondances entre codes de sortie et champs JSON doivent être vérifiées pour chaque version de Restic prise en charge. Ne pas appliquer indistinctement les règles du backup à check, copy ou prune.
 
-Parsing errors are explicit; do not invent missing metrics.
+Les erreurs de parsing doivent être explicites ; ne pas inventer les métriques manquantes.
 
-## Time limits
+## Limites de durée
 
-- start_deadline: maximum delay before starting.
-- max_runtime: maximum total runtime.
-- heartbeat_timeout: time without agent contact.
-- progress_timeout: time without progress; optional detection.
-- termination_grace_period: time between graceful termination and escalation.
+- start_deadline : délai maximal avant le démarrage.
+- max_runtime : durée totale maximale.
+- heartbeat_timeout : durée sans contact avec l’agent.
+- progress_timeout : durée sans progression ; détection facultative.
+- termination_grace_period : délai entre une demande d’arrêt gracieux et l’escalade.
 
-The initial proposal was to flag an anomaly for inspection when a limit is exceeded, not automatically kill Restic. Automatic termination requires a separate decision. Lack of progress alone is not sufficient evidence of a stuck process.
+La proposition initiale consistait à signaler une anomalie à inspecter en cas de dépassement, sans tuer automatiquement Restic. Un arrêt automatique nécessite une décision distincte. Une absence de progression ne suffit pas à prouver qu’un processus est bloqué.
 
-## Locking and recovery
+## Verrouillage et reprise
 
-A local OS-level lock covers all agent backups and local commands using the same execution manager. External Restic invocations are not implicitly covered.
+Un lock local au niveau du système d’exploitation couvre tous les backups de l’agent et les commandes locales utilisant le même moteur d’exécution. Les invocations externes de Restic ne sont pas couvertes implicitement.
 
-The server reserves jobs; maintenance operations are coordinated per repository. Native Restic locks are preserved. No automatic unlock based on a timeout alone.
+Le serveur réserve les jobs ; les opérations de maintenance sont coordonnées par repository. Les locks natifs Restic sont conservés. Aucun unlock automatique sur la seule base d’un timeout.
 
-After restart, inspect persisted attempts and any process still running. A PID alone is insufficient to identify an old process. Do not retry while the previous execution remains uncertain.
+Après redémarrage, inspecter les tentatives persistées et tout processus encore actif. Un PID seul ne suffit pas à identifier un ancien processus. Ne pas réessayer tant que l’exécution précédente reste incertaine.
 
 ## Maintenance
 
-Plan separate jobs for forget, prune, check, copy, and restore tests. Snapshot deletion and destructive maintenance require specific permissions and safeguards.
+Prévoir des jobs distincts pour forget, prune, check, copy et les tests de restauration. La suppression de snapshots et la maintenance destructive exigent des permissions et garde-fous spécifiques.
 
-Validation references:
+Références de validation :
 - https://restic.readthedocs.io/en/stable/040_backup.html
 - https://restic.readthedocs.io/en/stable/075_scripting.html
 - https://restic.readthedocs.io/en/stable/045_working_with_repos.html
 
-These links are references to verify during implementation; no version compatibility is claimed here.
+Ces liens sont des références à vérifier pendant l’implémentation ; aucune compatibilité de version n’est revendiquée ici.
