@@ -14,7 +14,7 @@ La conception est suffisamment décidée pour commencer l'implémentation, mais 
 - `unknown` signifie observation indéterminée. Les statuts détaillés par étape sont conservés.
 - `schema_version` entier à partir de 1 ; intersection maximale commune, refus sans intersection ; champs inconnus conservés en JSON et jamais exécutés.
 - Jobs autonomes : ID serveur à réception, identité locale durable avant exécution, déduplication et suppression Outbox après ACK persistant.
-- Enrollment : agent pré-déclaré, token unique/révocable valable 12 h, renouvellement manuel. Secrets via env/commande explicitement autorisée par clé ; aucun secret dans les logs.
+- Enrollment : agent pré-déclaré, token unique/révocable valable 12 h, renouvellement manuel. Secrets via env/commande explicitement autorisée par clé ; aucun secret dans les logs. La corrélation des logs par `server_job_id`, `local_job_uuid` ou `correlation_id` est autorisée aux utilisateurs habilités, sous contrôle d’accès, minimisation et rétention.
 - LDAP posixAccount avec StartTLS vérifié ; superadmin local de récupération hors ligne ; sessions et CSRF côté application.
 - Scheduling et maintenance sûrs : expiration d'un job non accepté à 12 h par défaut ; réévaluation des maintenances expirées ; aucune action destructive aveugle. Rétention keep-last minimum 1 et isolation Restic.
 - Export serveur quotidien ; perte d'historique jobs tolérée jusqu'à 3 jours ; RTO 24 h. Inventaire snapshots séparé et non générateur de jobs.

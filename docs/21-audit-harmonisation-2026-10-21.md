@@ -14,7 +14,7 @@ Le dépôt contient les documents `docs/01` à `docs/20`, les schémas et exempl
 - Échec primaire/pre-hook, Restic interrompu/timeout/sortie indécodable : `failed`. Réplication ou post-hook échoué après backup réussi : `partial`. Un échec primaire reste `failed`, même si un post-hook échoue simultanément ; les résultats par étape sont conservés. Un retry réussi reste `partial` pour investigation. Post-hook après échec pre-hook : configurable, `false` par défaut.
 - Job serveur non récupéré : remplacement futur ; ACK d’expiration par défaut à `start + 12 h`. Un job en overlap est annulé avec motif `running`.
 - Maintenance offline mise en cache et résultats remontés via Outbox. Snapshot primaire expiré ou inexistant : réplication abandonnée et `failed`. Rétention opérateur via directives Restic `keep-*`, avec protection obligatoire d’au moins le dernier snapshot valide par machine/profile/repository ; un snapshot expiré non répliqué peut être supprimé selon la policy, sauf cette protection et les autres garde-fous. Les snapshots à réussite inconnue ou non identifiés restent protégés ; aucune interdiction générale supplémentaire des snapshots en attente de copy n’est ajoutée.
-- Secrets par variable d’environnement ou commande par clé ; fnox est une option initiale. Aucun secret ni identifiant de job dans les logs.
+- Secrets par variable d’environnement ou commande par clé ; fnox est une option initiale. Aucun secret dans les logs ; les identifiants opaques `server_job_id`, `local_job_uuid` et `correlation_id` peuvent y figurer pour la corrélation par les utilisateurs habilités, sous contrôle d’accès et rétention.
 - Enrollment : machine pré-déclarée, token unique et révocable, valable 12 h, renouvellement manuel uniquement.
 - `schema_version` entier commençant à 1 ; négociation par version commune maximale, refus sans intersection. Extensions JSON DB préservées sans interprétation ni exécution. `server_job_id` attribué à l’ingestion ; déduplication durable, ACK après persistance, puis suppression Outbox.
 - LDAP `posixAccount` avec filtre additionnel et StartTLS vérifié. Superadmin local de récupération et safeguards de session. Le mapping LDAP groupes→rôles est explicitement futur/différé ; il n’est pas un blocker de l’authentification et du périmètre initial. Toute action opérateur auditée.
@@ -41,4 +41,3 @@ Les formulations historiques marquées `PROPOSITION`, notamment sur suspension, 
 - `docs/13-retention-planning.md` : planification/rétention et protection du dernier snapshot.
 - `docs/20-contrats-json-echanges.md` : catalogue explicatif ; les schémas v1 sous `contracts/schemas/v1/` restent normatifs.
 - `contracts/README.md` et `scripts/validate-contracts.py` : organisation et validation offline.
-
