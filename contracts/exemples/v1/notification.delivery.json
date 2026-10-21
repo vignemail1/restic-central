@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "message_id": "11111111-1111-4111-8111-111111111111",
+  "sent_at": "2026-10-21T12:00:00Z",
+  "payload": {"notification_id":"11111111-1111-4111-8111-111111111111","kind":"incident_opened","occurred_at":"2026-10-21T12:00:00Z","severity":"info","message":"example","recipients":["example"]},
+  "message_type": "notification.delivery"
+}
