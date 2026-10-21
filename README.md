@@ -34,6 +34,9 @@ La documentation historique reste disponible ; ces trois fichiers constituent l'
 14. [Cadrage LLM-ready normatif](docs/17-cadrage-llm-ready.md)
 15. [Audit et décisions consolidées](docs/18-audit-decisions-2026-10-21.md)
 16. [Contrat bootstrap v1](docs/19-schema-bootstrap-v1.json)
+17. [Contrats JSON d’échange v1](docs/20-contrats-json-echanges.md)
+18. [Schéma des échanges v1](docs/20-exchanges-v1.schema.json)
+19. [Exemple d’échange v1](docs/20-exchanges-v1.example.json)
 
 ## Statut des gates
 
@@ -44,5 +47,3 @@ La documentation historique reste disponible ; ces trois fichiers constituent l'
 - [ ] Enrollment, LDAP StartTLS, sessions, CSRF et audit opérateur
 - [ ] Restic >= 0.19.0, packaging, SBOM/licences et builds reproductibles
 - [ ] Export quotidien, inventaire et restauration démontrée en <=24 h
-
-Les cibles futures de build sont macOS arm64 et Windows amd64 ; le serveur et l'agent MVP restent Linux amd64 jusqu'à preuve de compatibilité.

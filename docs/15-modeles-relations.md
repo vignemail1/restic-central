@@ -7,50 +7,45 @@ Références normatives : [17-cadrage-llm-ready.md](17-cadrage-llm-ready.md), [1
 ## 1. Règles du contrat JSON
 
 - Draft JSON Schema **2020-12**, `schema_version: 1` entier, enveloppe versionnée et `message_type` explicite.
-- Chaque pair annonce ses versions ; la version retenue est l’intersection **maximale commune**. Aucune intersection ou version non supportée produit une erreur explicite, sans downgrade silencieux.
-- Les champs inconnus reçus sont conservés dans `extensions` (JSON borné) et ne sont jamais interprétés comme configuration, commande ou autorisation. Les implémentations peuvent refuser une enveloppe inconnue ; elles ne doivent pas l’exécuter.
-- Les secrets ne sont jamais des DTO publics : seuls `secret_ref` (`env`, commande autorisée par clé, OS secret manager ou fnox) et références non sensibles circulent. Aucun mot de passe, token ou valeur de credential dans les logs, arguments ou résultats.
-- `event_id`, `message_id` et clés d’idempotence sont opaques et stables. Un doublon est acquitté sans ré-exécution et les transitions de statut sont monotones.
+- Les UUID sont opaques et doivent rester stables dans les relations ; les dates sont RFC 3339 `date-time`.
+- `payload` est typé par `message_type` ; les extensions explicites sont permises seulement aux emplacements prévus.
+- Les secrets, tokens et références de secrets ne doivent jamais être exposés dans les événements, journaux ou résultats.
 
 ## 2. Échanges couverts
 
-Le contrat v1 couvre notamment la négociation de version, l’enrôlement agent, le heartbeat, la lecture de configuration, la réservation/acceptation/annulation de jobs, le renouvellement d’une tentative, les batches d’événements, les résultats de tentative, la réconciliation de snapshots, les erreurs, la pagination, les notifications, l’upload/acquittement de résultat et les demandes opérateur. La liste exhaustive et les `$defs` normatifs sont dans [20-exchanges-v1.schema.json](20-exchanges-v1.schema.json) ; l’inventaire lisible est [20-contrats-json-echanges.md](20-contrats-json-echanges.md).
-
-Chaque message porte une enveloppe commune (`schema_version`, `message_type`, `message_id`, `sent_at`, `payload`) et peut porter `correlation_id`, `agent_id` et `extensions`. Les identifiants sont des UUID dans le contrat actuel, opaques pour la sémantique métier.
+Le contrat couvre négociation de version, enrollment, heartbeat, configuration, claim/accept/cancel, lease, événements, résultats, réconciliation, erreurs, pagination, notifications, upload/ack et demandes opérateur. Les types normatifs et leurs payloads sont inventoriés dans [20-contrats-json-echanges.md](20-contrats-json-echanges.md).
 
 ## 3. Graphe relationnel corrigé
 
-- **Repository** représente une cible logique ; ses références d’accès et paramètres sensibles restent hors DTO public.
-- **Job** décrit l’intention planifiée et référence un repository, une politique et des hooks bornés.
-- **JobAttempt** représente une exécution concrète, avec lease, idempotency key, timestamps, statut terminal ou reprise.
-- **StepResult** détaille les étapes sans transformer une sortie d’outil en commande.
-- **Event** est append-only et corrélé à une tentative ; sa livraison est idempotente.
-- **Snapshot** est une observation/référence de backup, pas une preuve implicite de restauration.
-- **NotificationDelivery** et **ResultUpload** suivent leur propre état et accusé de réception.
-- Les relations serveur sont des références stables (`repository_id`, `server_job_id`, `attempt_id`, `event_id`) ; elles ne confondent pas identifiant serveur, UUID local et clé d’idempotence.
+- **Machine** possède des agents et est la frontière d’appartenance des repositories.
+- **Agent** représente une instance locale remplaçable ; `agent_instance_id` distingue les remplacements et n’autorise pas deux writers actifs sans décision explicite.
+- **Repository** appartient à une seule machine ; le repository primaire et les destinations de copie sont référencés par identifiants, jamais par des secrets dans le contrat.
+- **Profile** versionne sources, exclusions, hooks, rétention et repositories ciblés.
+- **Job** est l’intention planifiée ou opérateur ; **Attempt** est une exécution concrète avec lease, événements ordonnés et résultat terminal.
+- **Snapshot** est une observation/provenance Restic ; sa réconciliation ne fabrique pas une preuve d’exécution.
+- **Outbox** porte les messages durables, l’idempotence et l’ack ; une perte ou saturation doit être observable.
 
 ## 4. Sémantique d’exécution et de reprise
 
-La réservation est suivie d’un `job.accept` explicite ou d’une expiration de lease. Une tentative peut être renouvelée ; l’agent doit arrêter proprement une lease expirée et le serveur doit tolérer les messages retardés sans ré-exécution. `attempt.result` est idempotent par `idempotency_key`, accepte un résultat partiel, et ne rend pas un job réussi si une étape obligatoire a échoué.
+Un seul backup actif par machine est la règle MVP. Un job accepté possède un `attempt_id`, une lease renouvelable et une clé d’idempotence. Une expiration de lease ou une interruption ne doit pas être présentée comme un succès : l’état `unknown` est conservé jusqu’à réconciliation. Les états `partial`, `failed`, `unknown`, `degraded` et `persistence_failed` restent distincts.
 
-Les opérations sont bornées par timeout, retry policy et limites de taille. Les erreurs portent un `code`, un message non sensible et `retryable`; les détails d’implémentation et secrets restent exclus. Les hooks sont des références autorisées, jamais des shell strings arbitraires.
+Les événements sont append-only côté agent et dédupliqués côté serveur par identifiant/idempotence. La reprise compare état autoritatif, événements attendus et résultats en attente ; elle ne ré-exécute pas aveuglément un backup dont l’issue est inconnue.
 
 ## 5. Réconciliation et maintenance sûre
 
-La réconciliation compare des observations bornées et versionnées ; elle ne supprime ni ne réécrit silencieusement une donnée divergente. Les suppressions/rotations demandent une politique explicite, une idempotency key et une trace d’audit. Les versions de schéma sont négociées ; une version inconnue est rejetée avec erreur structurée.
-
-Les champs libres sont placés dans `extensions`, validés par taille/profondeur et préservés sans exécution. Les DTO publics ne contiennent pas de credential. Les logs, notifications et rapports redigent les secrets par défaut.
+La réconciliation couvre agents remplacés, outbox persistante, jobs actifs, résultats en attente et snapshots observés. Les actions de maintenance (forget, prune, check, stats, copies) restent des jobs explicites, auditables et soumis aux mêmes garde-fous de repository et de concurrence. Les notifications distinguent incident ouvert, récupération et rapports ; elles ne remplacent pas la preuve détaillée.
 
 ## 6. Constats et corrections de l’ancien modèle 15
 
-1. Séparer les identifiants serveur, UUID locaux, événements et clés d’idempotence.
-2. Modéliser explicitement `JobAttempt`, `StepResult`, lease et résultat partiel.
-3. Remplacer les payloads polymorphes implicites par `message_type` et `$defs` versionnés.
-4. Ne pas confondre snapshot observé, résultat de backup et restauration vérifiée.
-5. Transporter les secrets par références autorisées uniquement.
-6. Rendre les doublons, reprises, retards et erreurs retryable explicites.
-7. Considérer la réconciliation comme une opération contrôlée et auditable, non comme une réparation destructive automatique.
+- Le modèle historique mélangeait intention de job, tentative, événements et snapshots ; ils sont séparés ici.
+- Le repository n’est pas globalement partagé : l’isolation par machine reste une invariant.
+- Une copie n’est pas un backup primaire et une tentative de copie n’est pas le même objet qu’un job parent.
+- `failed`, `partial` et `unknown` ne sont pas interchangeables ; une sortie process seule ne suffit pas à conclure.
+- Les hooks sont ordonnés, bornés et sans exfiltration de secrets ; leur politique métier finale reste à décider.
+- Le schéma et le document de contrat ne revendiquent aucune implémentation livrée.
 
 ## 7. Limites et propositions ouvertes
 
-Ce document et le schéma définissent un contrat documentaire v1 ; ils ne constituent pas une preuve d’implémentation. Restent à décider et tester : la politique exacte de rétention, la taxonomie complète des hooks autorisés, les quotas de transport, le stockage des payloads volumineux, les garanties de transaction et les scénarios de reprise après partition. Toute extension doit préserver la compatibilité négociée, l’idempotence et l’absence de secrets dans les DTO/logs.
+Ce contrat n’invente pas les détails non validés : chemins REST stables, pagination exacte côté serveur, code HTTP, stratégie catch-up/jitter, procédure de révocation hors ligne, mapping LDAP/rôles, politique required/optional multi-copy, agrégation de plusieurs hooks, format final d’export, chiffrement/retention des exports, et commandes exactes de maintenance. Ils doivent obtenir une décision puis être ajoutés au schéma et testés.
+
+MVP visé : programmes Go 1.27.x, Linux amd64, Restic >= 0.19.0 ; aucune promesse d’implémentation ou de production-readiness n’est faite par ces fichiers.

@@ -4,144 +4,377 @@
 
 ## 1. Enveloppe commune
 
-| Champ | Type / contrainte | Requis | Sémantique |
+| Champ | Type/contrainte | Requis | Notes |
 |---|---|---:|---|
-| `schema_version` | integer = `1`; const=1 | oui |  |
-| `message_type` | string (`version.negotiate.request`, `version.negotiate.response`, `agent.enroll`, `agent.enroll.result`, `heartbeat`, `config.get.response`, `job.claim.request`, `job.claim.response`, `job.accept`, `job.cancel`, `attempt.renew`, `event.batch`, `attempt.result`, `snapshot.reconcile`, `reconcile.request`, `reconcile.response`, `error`, `page.response`, `notification.delivery`, `result.upload`, `result.ack`, `operator.job.request`, `operator.job.response`);  | oui |  |
-| `message_id` | string; format=uuid | oui | Identifiant UUID opaque. |
-| `correlation_id` | string; format=uuid | non | Identifiant UUID opaque. |
-| `agent_id` | string; format=uuid | non | Identifiant UUID opaque. |
-| `sent_at` | string; format=date-time | oui | Horodatage RFC 3339 avec timezone, transmis en UTC. |
-| `payload` | object;  | oui |  |
-| `extensions` | object;  | non | Champs inconnus conservés sans interprétation ni exécution. Taille et profondeur bornées par transport. |
-
-`payload` est un objet dont la forme dépend de `message_type`; `extensions` est conservé sans interprétation. Les identifiants sont opaques. Les dates sont RFC 3339 avec fuseau, transmises en UTC.
+| `schema_version` | integer = `1`; const=1 | oui | Version du contrat |
+| `message_type` | string; enum des 23 types | oui | Routage typé |
+| `message_id` | string; UUID | oui | Identifiant unique du message |
+| `correlation_id` | string; UUID | non | Trace d’une interaction |
+| `agent_id` | string; UUID | non | Identifiant logique de l’agent |
+| `sent_at` | string; date-time | oui | RFC 3339 |
+| `payload` | object typé par message | oui | Voir inventaire |
+| `extensions` | object libre | non | Extension explicitement permise |
 
 ## 2. Inventaire exhaustif par type de message
 
-Chaque ligne renvoie explicitement au `$defs` indiqué. `—` signifie champ facultatif ou non applicable dans ce message.
+### `version.negotiate.request` → `$defs/payload_version_negotiate_request`
 
-| `message_type` | `$defs` payload | Champs obligatoires principaux | Idempotence / sûreté |
-|---|---|---|---|
-| `version.negotiate.request` | `version_negotiate_request` | `supported_schema_versions` | Intersection maximale commune ; pas de downgrade silencieux. |
-| `version.negotiate.response` | `version_negotiate_response` | `selected_schema_version`, `server_supported_schema_versions` | Rejeter si version sélectionnée incompatible. |
-| `agent.enroll` | `agent_enroll` | `agent_name`, `capabilities` | Aucune valeur de secret dans le DTO. |
-| `agent.enroll.result` | `agent_enroll_result` | `agent_id`, `status` | Réponse corrélée, sans token en clair. |
-| `heartbeat` | `heartbeat` | `agent_status` | Répétition tolérée ; pas de commande implicite. |
-| `config.get.response` | `config_get_response` | `config_version`, `values` | Les secrets sont `secret_refs`, jamais des valeurs. |
-| `job.claim.request` | `job_claim_request` | `agent_id` | Lecture/réservation bornée. |
-| `job.claim.response` | `job_claim_response` | `claim_status` | Lease explicite ; expiration sûre. |
-| `job.accept` | `job_accept` | `server_job_id`, `attempt_id`, `lease_expires_at` | Idempotency key ; acceptation explicite. |
-| `job.cancel` | `job_cancel` | `server_job_id`, `reason` | Annulation auditable et idempotente. |
-| `attempt.renew` | `attempt_renew` | `attempt_id`, `lease_expires_at` | Refuser le renouvellement d’une lease expirée selon politique. |
-| `event.batch` | `event_batch` | `attempt_id`, `events` | `event_id` stable ; déduplication. |
-| `attempt.result` | `attempt_result` | `attempt_id`, `server_job_id`, `status`, `idempotency_key`, `steps` | Résultat partiel explicite ; pas de ré-exécution sur doublon. |
-| `snapshot.reconcile` | `snapshot_reconcile` | `repository_id`, `snapshots` | Observation bornée, sans suppression implicite. |
-| `reconcile.request` | `reconcile_request` | `repository_id`, `observed_at` | Opération auditable et idempotente. |
-| `reconcile.response` | `reconcile_response` | `repository_id`, `status` | Statut explicite, aucune réparation silencieuse. |
-| `error` | `error` | `code`, `message`, `retryable` | Message non sensible ; retry explicite. |
-| `page.response` | `page_response` | `items` | Curseur opaque et borné. |
-| `notification.delivery` | `notification_delivery` | `notification_id`, `channel`, `status` | Déduplication par idempotency key. |
-| `result.upload` | `result_upload` | `attempt_id`, `content_ref`, `idempotency_key` | Référence de contenu, pas de payload illimité. |
-| `result.ack` | `result_ack` | `attempt_id`, `status` | `duplicate` est un acquittement sûr. |
-| `operator.job.request` | `operator_job_request` | `repository_id`, `policy_id`, `idempotency_key` | Requête opérateur explicitement corrélée et autorisée. |
-| `operator.job.response` | `operator_job_response` | `status` | Réponse sans secret ; `duplicate` explicite. |
+Message agent vers serveur pour annoncer versions supportées, taille maximale et capacités.
 
-## 3. Contrats transverses
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `supported_schema_versions` | array<integer>; minItems=1, maxItems=16 | oui |
+| `max_message_bytes` | integer; 1024..104857600 | oui |
+| `agent_id` | UUID | oui |
+| `sent_at` | date-time | oui |
+| `capabilities` | array<string>; maxItems=256 | non |
+| `extensions` | object | non |
 
-### Identité, corrélation et temps
+### `version.negotiate.response` → `$defs/payload_version_negotiate_response`
 
-`message_id` identifie l’enveloppe ; `correlation_id` relie une réponse ou un événement à son flux ; `agent_id`, `server_job_id`, `attempt_id`, `repository_id` et `event_id` ont des rôles distincts. Les dates sont RFC 3339 avec timezone et sont transmises en UTC.
+Réponse serveur avec version choisie, versions disponibles et horodatage.
 
-### Versioning et compatibilité
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `selected_schema_version` | integer >=1 | oui |
+| `server_supported_schema_versions` | array<integer>; 1..16 | oui |
+| `sent_at` | date-time | oui |
+| `max_message_bytes` | integer; 1024..104857600 | non |
+| `extensions` | object | non |
 
-La négociation porte sur les versions réellement supportées. La version retenue est l’intersection maximale commune ; absence d’intersection ou proposition inconnue produit une erreur structurée. Une implémentation ne doit pas exécuter une enveloppe dont `schema_version` ou `message_type` n’est pas accepté.
+### `agent.enroll` → `$defs/payload_agent_enroll`
 
-### Idempotence et reprise
+Enrollment initial ; le token n’est pas journalisé et la réponse de credential doit être protégée.
 
-Les opérations à effets (`job.accept`, `job.cancel`, `attempt.renew`, `event.batch`, `attempt.result`, réconciliation, notifications et uploads) portent une clé d’idempotence ou un identifiant stable. Un doublon doit être reconnu sans répéter l’effet. Une lease expirée est une condition de sécurité, pas une invitation à reprendre silencieusement.
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `enrollment_token` | string; 20..4096 caractères | oui |
+| `machine_id` | UUID | oui |
+| `agent_instance_id` | UUID | oui |
+| `agent_version` | string; 1..128 | oui |
+| `platform` | const `linux/amd64` | oui |
+| `restic_version` | pattern `0.x.y...` | non |
+| `sent_at` | date-time | oui |
+| `extensions` | object | non |
 
-### Secrets et hooks
+### `agent.enroll.result` → `$defs/payload_agent_enroll_result`
 
-Un DTO public ne contient ni mot de passe, ni token, ni credential. Un `secret_ref` nomme une source autorisée (`env`, commande allowlistée, OS secret manager ou `fnox`) ; la valeur est résolue au dernier moment dans un périmètre contrôlé. Les hooks sont des références à des commandes allowlistées, jamais des shell strings reçues du serveur.
+Résultat d’enrollment ; la valeur de credential est sensible et ne doit pas être persistée en clair.
 
-### Extensions et limites
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `agent_id` | UUID | oui |
+| `credential` | object `{kind, value}` | oui |
+| `expires_at` | date-time | oui |
+| `sent_at` | date-time | oui |
+| `extensions` | object | non |
 
-`extensions` conserve des champs inconnus sans les interpréter. Il est borné en taille/profondeur par le transport et ne peut pas contourner les contrôles de sécurité. Les payloads volumineux passent par une référence de contenu (`content_ref`) et un upload séparé.
+### `heartbeat` → `$defs/payload_heartbeat`
 
-## 4. Définitions imbriquées importantes
+État agent, tentatives actives et santé de l’outbox.
 
-Les références imbriquées suivantes font partie du contrat et ne doivent pas être remplacées par des champs libres : `hook`, `job_dto`, `event`, `step_result`, `snapshot_ref`, `active_attempt`, `error`.
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `agent_id`, `agent_instance_id` | UUID | oui |
+| `observed_at` | date-time | oui |
+| `state` | `online`, `degraded`, `offline_pending` | oui |
+| `active_attempts` | array; maxItems=32 | oui |
+| `outbox` | compteurs et état de perte | oui |
 
-### `hook`
+### `config.get.response` → `$defs/payload_config_get_response`
 
-Un hook contient un nom logique, une référence de commande autorisée et, si nécessaire, des `secret_refs`. Il est refusé si le serveur tente de transmettre une commande arbitraire ou une valeur sensible.
+Configuration effective identifiée par révision ; les secrets sont des références autorisées, jamais des valeurs.
 
-### `job_dto`
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `config_revision_id`, `profile_id`, `machine_id` | UUID | révision oui; autres non |
+| `config_revision` | integer >=1 | oui |
+| `effective_from` | date-time | oui |
+| `profile` | object avec `name`, `primary_repository`, `sources`, `hooks`, `retention` | non |
+| `sent_at` | date-time | oui |
+| `extensions` | object | non |
 
-Un job relie `server_job_id`, `repository_id` et `policy_id`, puis expose des hooks bornés. Le job décrit l’intention ; `attempt_id` décrit l’exécution.
+### `job.claim.request` → `$defs/payload_job_claim_request`
 
-### `event` et `step_result`
+Demande de travail atomique ; MVP : une seule place disponible.
 
-Un event append-only est identifié par `event_id` et rattaché à une tentative dans `event_batch`. Un `step_result` distingue `queued`, `running`, `succeeded`, `failed` et `skipped`; l’erreur inclut `code`, message non sensible et `retryable`.
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `agent_id` | UUID | oui |
+| `available_slots` | const `1` | oui |
+| `sent_at` | date-time | oui |
+| `known_server_job_ids` | array<UUID>; maxItems=1000 | non |
+| `extensions` | object | non |
 
-### `snapshot_ref`
+### `job.claim.response` → `$defs/payload_job_claim_response`
 
-Une référence de snapshot identifie un snapshot observé pour un repository et peut porter date d’observation et taille. Elle ne vaut pas preuve de restauration vérifiée.
+Décision de claim ; `job` est présent pour la décision `job`.
 
-## 5. Exemples minimaux complémentaires
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `decision` | `none` ou `job` | oui |
+| `job` | `job_dto` | non |
+| `sent_at` | date-time | oui |
+| `extensions` | object | non |
+
+### `job.accept` → `$defs/payload_job_accept`
+
+Accusé de prise en charge avec lease initiale.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `server_job_id`, `local_job_uuid`, `attempt_id` | UUID | oui |
+| `accepted_at`, `expires_at` | date-time | oui |
+| `config_revision_id` | UUID | non |
+| `extensions` | object | non |
+
+### `job.cancel` → `$defs/payload_job_cancel`
+
+Demande/résultat de cancel idempotent.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `server_job_id`, `local_job_uuid`, `request_id` | UUID | oui |
+| `state` | enum cancel_requested/canceled/already_finished/not_found | oui |
+| `reason` | string 1..512 | oui |
+| `requested_at` | date-time | oui |
+| `confirmed_at` | date-time | non |
+| `extensions` | object | non |
+
+### `attempt.renew` → `$defs/payload_attempt_renew`
+
+Renouvellement de lease.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `attempt_id`, `server_job_id`, `lease_id` | UUID | oui |
+| `renewed_at`, `lease_expires_at` | date-time | oui |
+| `extensions` | object | non |
+
+### `event.batch` → `$defs/payload_event_batch`
+
+Lot append-only d’événements ordonnés.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `attempt_id` | UUID | oui |
+| `events` | array<event>; 1..1000 | oui |
+| `extensions` | object | non |
+
+### `attempt.result` → `$defs/payload_attempt_result`
+
+Résultat terminal ou intermédiaire d’une tentative, avec étapes et idempotence.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `attempt_id`, `server_job_id`, `local_job_uuid` | UUID | oui |
+| `status` | enum état job | oui |
+| `started_at`, `finished_at` | date-time | oui |
+| `steps` | array<step_result>; 1..10000 | oui |
+| `idempotency_key` | string 1..256 | oui |
+| `snapshot`, `error`, `restic_json` | objets typés | non |
+| `extensions` | object | non |
+
+### `snapshot.reconcile` → `$defs/payload_snapshot_reconcile`
+
+Observation de snapshots sans conclure à une réussite de job.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `repository_id` | UUID | oui |
+| `machine_id` | UUID | non |
+| `observed_at` | date-time | oui |
+| `mode` | `full` ou `incremental` | oui |
+| `collector` | string | non |
+| `snapshots` | array<snapshot_ref>; maxItems=100000 | oui |
+| `extensions` | object | non |
+
+### `reconcile.request` → `$defs/payload_reconcile_request`
+
+Demande de réconciliation des actifs et résultats en attente.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `agent_id` | UUID | oui |
+| `sent_at` | date-time | oui |
+| `active_attempts` | array<active_attempt>; maxItems=32 | oui |
+| `pending_results` | array; maxItems=1000 | oui |
+| `extensions` | object | non |
+
+### `reconcile.response` → `$defs/payload_reconcile_response`
+
+État autoritatif et divergences à traiter.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `authoritative_state` | object | oui |
+| `expected_event_ids` | array<string>; maxItems=10000 | oui |
+| `divergences` | array; maxItems=1000 | non |
+| `sent_at` | date-time | oui |
+| `extensions` | object | non |
+
+### `error` → `$defs/payload_error`
+
+Erreur structurée sans secret.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `code`, `message` | string | oui |
+| `retryable` | boolean | oui |
+| `request_id` | UUID | oui |
+| `details` | object | non |
+| `retry_after_seconds` | integer >=0 | non |
+| `extensions` | object | non |
+
+### `page.response` → `$defs/payload_page_response`
+
+Réponse paginée générique ; le détail du curseur reste une décision serveur.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `items` | array<object>; maxItems=1000 | oui |
+| `page` | integer >=1 | oui |
+| `page_size` | integer 1..1000 | oui |
+| `has_more` | boolean | oui |
+| `next_cursor` | string/null | non |
+| `as_of` | date-time | non |
+| `extensions` | object | non |
+
+### `notification.delivery` → `$defs/payload_notification_delivery`
+
+Notification d’incident/rapport et statut de livraison.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `notification_id` | UUID | oui |
+| `incident_id` | UUID/null | non |
+| `kind` | incident_opened/recovered/summary_24h/report_7d | oui |
+| `occurred_at` | date-time | oui |
+| `severity` | info/warning/critical | oui |
+| `message` | string max 10000 | oui |
+| `recipients` | array<string>; 1..1000 | oui |
+| `delivery_status` | pending/sent/failed | non |
+| `extensions` | object | non |
+
+### `result.upload` → `$defs/payload_result_upload`
+
+Upload idempotent d’un résultat.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `attempt_id` | UUID | oui |
+| `idempotency_key` | string 1..256 | oui |
+| `result` | `payload_attempt_result` | oui |
+| `sent_at` | date-time | oui |
+| `extensions` | object | non |
+
+### `result.ack` → `$defs/payload_result_ack`
+
+Accusé d’acceptation, duplication ou rejet.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `attempt_id` | UUID | oui |
+| `idempotency_key` | string 1..256 | oui |
+| `status` | accepted/duplicate/rejected | oui |
+| `acknowledged_at` | date-time | oui |
+| `request_id` | UUID | non |
+| `error` | error | non |
+| `extensions` | object | non |
+
+### `operator.job.request` → `$defs/payload_operator_job_request`
+
+Demande opérateur d’exécution d’un job.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `request_id`, `machine_id`, `profile_id` | UUID | oui |
+| `job_type` | backup/copy/forget/prune/check/stats | oui |
+| `config_revision_id` | UUID | non |
+| `requested_at` | date-time | oui |
+| `reason` | string 1..512 | non |
+| `extensions` | object | non |
+
+### `operator.job.response` → `$defs/payload_operator_job_response`
+
+Décision opérateur et job éventuel.
+
+| Champ | Type/contrainte | Requis |
+|---|---|---:|
+| `request_id` | UUID | oui |
+| `decision` | accepted/rejected | oui |
+| `job` | job_dto | non |
+| `sent_at` | date-time | oui |
+| `error` | error | non |
+| `extensions` | object | non |
+
+## 3. Définitions réutilisées (`$defs`)
+
+Les objets `hook`, `job_dto`, `event`, `step_result`, `snapshot_ref`, `active_attempt` et `error` sont définis dans le schéma. Leurs champs obligatoires, bornes, enums et `additionalProperties` font foi dans le JSON Schema ; ce document ne les duplique pas intégralement.
+
+## 4. Exemples conformes
 
 Les exemples ci-dessous sont minimaux pour illustrer les flux ajoutés ; ils complètent `20-exchanges-v1.example.json` (résultat terminal). Ils ne promettent pas une implémentation.
 
-### Version negotiation request
-
 ```json
 {
   "schema_version": 1,
-  "message_type": "version.negotiate.request",
-  "message_id": "11111111-1111-4111-8111-111111111111",
-  "sent_at": "2026-10-21T12:00:00Z",
-  "payload": {"supported_schema_versions": [1]}
-}
-```
-
-### Job claim response
-
-```json
-{
-  "schema_version": 1,
-  "message_type": "job.claim.response",
-  "message_id": "11111111-1111-4111-8111-111111111111",
-  "sent_at": "2026-10-21T12:00:00Z",
-  "payload": {"claim_status": "empty"}
-}
-```
-
-### Structured error
-
-```json
-{
-  "schema_version": 1,
-  "message_type": "error",
-  "message_id": "11111111-1111-4111-8111-111111111111",
+  "message_type": "heartbeat",
+  "message_id": "00000000-0000-4000-8000-000000000001",
   "sent_at": "2026-10-21T12:00:00Z",
   "payload": {
-    "code": "version_mismatch",
-    "message": "No compatible schema version",
-    "retryable": false
+    "agent_id": "00000000-0000-4000-8000-000000000002",
+    "agent_instance_id": "00000000-0000-4000-8000-000000000003",
+    "observed_at": "2026-10-21T12:00:00Z",
+    "state": "online",
+    "active_attempts": [],
+    "outbox": {"pending_count": 0, "oldest_pending_at": null, "loss_state": "none"}
   }
 }
 ```
 
-## 6. Checklist d’implémentation
+```json
+{
+  "schema_version": 1,
+  "message_type": "job.claim.request",
+  "message_id": "00000000-0000-4000-8000-000000000004",
+  "sent_at": "2026-10-21T12:00:00Z",
+  "payload": {
+    "agent_id": "00000000-0000-4000-8000-000000000002",
+    "available_slots": 1,
+    "sent_at": "2026-10-21T12:00:00Z"
+  }
+}
+```
 
-- Valider l’enveloppe et le payload avec Draft 2020-12 avant traitement.
-- Vérifier `message_type`, corrélation, lease, idempotency key et autorisation avant tout effet.
-- Dédupliquer messages, événements, notifications et uploads.
-- Redacter secrets dans logs, erreurs, rapports et notifications.
-- Rejeter explicitement les versions incompatibles, les hooks arbitraires et les extensions hors limites.
-- Tester doublons, retards, expiration, partition, reprise, résultat partiel et réconciliation divergente.
+```json
+{
+  "schema_version": 1,
+  "message_type": "result.ack",
+  "message_id": "00000000-0000-4000-8000-000000000005",
+  "sent_at": "2026-10-21T12:00:00Z",
+  "payload": {
+    "attempt_id": "00000000-0000-4000-8000-000000000006",
+    "idempotency_key": "attempt-0001",
+    "status": "accepted",
+    "acknowledged_at": "2026-10-21T12:00:00Z"
+  }
+}
+```
 
-## 7. Limites
+## 5. Règles métier hors schéma
 
-Ce document est un inventaire documentaire. Les garanties transactionnelles, quotas exacts, mécanismes de transport, politiques de rétention et implémentation serveur/agent restent à décider ou à tester. Le schéma est la source normative des formes JSON ; cette page documente la sémantique et les limites non exprimables entièrement par le schéma.
+- Une seule exécution backup active par machine ; lease et idempotence déterminent la reprise.
+- `unknown` est conservé lorsqu’une interruption empêche de prouver l’issue ; snapshot observé n’est pas preuve de succès.
+- Les relations entre UUID, ordre temporel, autorisation, absence de secrets et cohérence serveur sont validées par code et tests.
+- Les tokens, credentials, URLs sensibles et valeurs d’environnement restent hors des logs et événements.
+- L’outbox durable, la déduplication et la saturation sont observables ; une perte est un incident explicite.
+
+## 6. Limites et lacunes explicites
+
+- Le schéma ne garantit pas les relations temporelles (`finished_at` après `started_at`), la cohérence croisée des UUID, ni l’absence de secrets.
+- `additionalProperties: false` s’applique à l’enveloppe et aux objets typés ; les extensions doivent utiliser le champ `extensions` prévu.
+- Les codes HTTP, routes REST finales, auth, rotation/révocation et détail du curseur restent à spécifier par la couche API.
+- `operator.job.request/response` couvre la demande de job opérateur, pas toutes les opérations d’administration (configuration, révocation, rapports, incidents).
+- Le schéma ne garantit pas les relations temporelles (`finished_at` après `started_at`), la cohérence croisée des UUID, ni l’absence de secrets.
+- Statut : conception documentaire, non production-ready.
