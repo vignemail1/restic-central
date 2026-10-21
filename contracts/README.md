@@ -1,20 +1,22 @@
 # Contrats JSON v1
 
-Cette arborescence remplace le contrat monolithique pour permettre un fichier autonome par `message_type` :
+## Organisation et source de vérité
 
-- `schemas/v1/<message>.schema.json` : Draft 2020-12, `$id` stable, définitions locales et refs résolubles.
-- `exemples/v1/<message>.json` : un exemple par type, avec `schema_version: 1`.
+- `schemas/v1/<message>.schema.json` : un point d'entrée Draft 2020-12 par `message_type`.
+- `schemas/v1/_shared.schema.json` : référence relative vers `../../.. /docs/20-exchanges-v1.schema.json` (sans l'espace : `../../../docs/20-exchanges-v1.schema.json`).
+- `../docs/20-exchanges-v1.schema.json` : source de vérité des champs et contraintes v1, conservée sans duplication.
+- `exemples/v1/<message>.json` : exemples illustratifs avec `schema_version: 1`.
 
-Les exemples sont des données de contrat illustratives, sans secrets ni chemins sensibles. Le champ `restic_json` est réservé à la sortie JSON Restic bornée et préservée ; il ne transforme pas cette sortie en contrat API.
+Chaque schéma de message combine le contrat complet et une contrainte `const` sur `message_type`. Le contrat de référence applique ensuite les contraintes du payload correspondant : champs obligatoires, types, bornes et propriétés supplémentaires. Ce ne sont pas des schémas autonomes : distribuer aussi `_shared.schema.json` et le contrat de référence en conservant leurs chemins relatifs. Charger les schémas depuis leur URI de fichier, avec un résolveur Draft 2020-12 prenant en charge les références relatives. Activer explicitement la validation des formats UUID et date-time si le validateur ne la fait pas par défaut.
 
 ## Sorties Restic et provenance
 
-Les formes Restic ne sont pas inventées dans ces exemples. La documentation officielle stable consultée le 21 octobre 2026 décrit le JSON output et les formats `backup`, `check`, `snapshots`, `copy` et autres dans [Scripting — JSON output](https://restic.readthedocs.io/en/stable/075_scripting.html), ainsi que le contexte et le snapshot créé par `backup` dans [Backing up](https://restic.readthedocs.io/en/stable/040_backup.html). Les versions précises des extraits changent avec la documentation stable : toujours conserver la version de Restic observée avec la sortie et traiter une forme inconnue comme `unknown`/`failed`, jamais comme une réussite.
+Les exemples sont des données illustratives, non une preuve d'exécution de Restic. Le champ `restic_json` conserve une sortie Restic ; il ne transforme pas cette sortie en contrat API. Références : [Scripting — JSON output](https://restic.readthedocs.io/en/stable/075_scripting.html) et [Backing up](https://restic.readthedocs.io/en/stable/040_backup.html). Conserver la version de Restic observée et ne jamais assimiler une sortie inconnue à une réussite.
 
-Le dépôt accepte Restic `>=0.19.0` selon le cadrage documentaire, mais cette arborescence ne prétend pas valider un binaire local. Aucun secret d’accès, mot de passe ou token n’est inclus.
+Le cadrage prévoit Restic `>=0.19.0`. Aucun binaire n'est validé par ces schémas. Ne pas inclure de véritables secrets dans les exemples.
 
-## Règles de compatibilité
+## Compatibilité et validation
 
-La négociation sélectionne la version commune maximale. Une version inconnue ou un champ inconnu est conservé dans `extensions`, sans interprétation ni exécution. Les résultats sont idempotents via `message_id`/`idempotency_key`; l’Outbox doit persister avant envoi et l’ack après déduplication et stockage.
+La négociation sélectionne la version commune maximale. Les champs inconnus doivent être préservés dans `extensions` avant validation du contrat strict, sans interprétation ni exécution. Les résultats sont idempotents via `message_id`/`idempotency_key` ; l'Outbox persiste avant envoi et l'ack suit la déduplication et le stockage.
 
-Voir `docs/20-contrats-json-echanges.md` pour l’inventaire explicatif. La source normative est dans `contracts/schemas/v1/`; les exemples exécutables sont dans `contracts/exemples/v1/`. Valider hors ligne avec `python3 scripts/validate-contracts.py`, puis exécuter `python3 scripts/test_validate_contracts.py`.
+La publication des points d'entrée ne constitue pas une validation automatisée des exemples ni des règles métier transversales (ordre temporel, négociation maximale, correspondance des identifiants, transitions d'état). Ces vérifications doivent être exécutées avant fusion.
