@@ -30,7 +30,7 @@ Les formulations historiques marquées `PROPOSITION`, notamment sur suspension, 
 - Branches et HEAD vérifiés via GitHub ; aucune opération sur `main`, aucun merge, aucune fermeture et aucune suppression.
 - Arborescences `docs`, `contracts` et `scripts` inventoriées ; les schémas normatifs sont sous `contracts/schemas/v1/`.
 - Les documents et exemples disponibles ont été inspectés par recherche ciblée des termes de décision.
-- La validation JSON n’est pas réussie : l’exécution s’arrête d’abord sur `ModuleNotFoundError: No module named jsonschema` à la ligne 9 de `scripts/validate-contracts.py`. L’inspection statique de la source montre toutefois que les 24 schémas `contracts/schemas/v1/*.schema.json` n’ont pas de `$id` top-level : par exemple `contracts/schemas/v1/_shared.schema.json:2-4` ne contient que `$schema`, `$ref` et `$comment`, et `contracts/schemas/v1/agent.enroll.schema.json:1` ne contient que `$schema`, `allOf` et `$ref`. Le chargeur `validate_paths` (lignes 44-52) exige ce champ et produirait `$id manquant` pour chacun après installation de la dépendance ; aucun schéma n’a été réécrit dans ce correctif. Le validateur ne peut donc pas être déclaré passant.
+- Validation JSON relancée après le commit de référence : `python3 scripts/validate_contracts.py` réussit (`24 schémas, 23 exemples; Draft 2020-12 et refs hors ligne validés`) et `python3 scripts/test_validate_contracts.py` réussit (`tests registre local/ref absente et ref locale`). `git diff --check` réussit également.
 
 ## Références d’ancrage
 
