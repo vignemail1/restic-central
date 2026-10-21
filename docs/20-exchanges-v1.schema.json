@@ -1,1 +1,223 @@
-# synchronisé depuis le livrable local : voir le fichier complet dans le workspace
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://restic-central.invalid/schema/exchanges-v1.json",
+  "title": "restic-central échanges JSON v1",
+  "description": "Contrat DTO public; secrets par référence. Les champs inconnus sont dans extensions et ne sont jamais exécutés.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "message_type",
+    "message_id",
+    "sent_at",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "message_type": {
+      "type": "string",
+      "enum": [
+        "version.negotiate.request",
+        "version.negotiate.response",
+        "agent.enroll",
+        "agent.enroll.result",
+        "heartbeat",
+        "config.get.response",
+        "job.claim.request",
+        "job.claim.response",
+        "job.accept",
+        "job.cancel",
+        "attempt.renew",
+        "event.batch",
+        "attempt.result",
+        "snapshot.reconcile",
+        "reconcile.request",
+        "reconcile.response",
+        "error",
+        "page.response",
+        "notification.delivery",
+        "result.upload",
+        "result.ack",
+        "operator.job.request",
+        "operator.job.response"
+      ]
+    },
+    "message_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identifiant UUID opaque."
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identifiant UUID opaque."
+    },
+    "agent_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identifiant UUID opaque."
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Horodatage RFC 3339 avec timezone, transmis en UTC."
+    },
+    "payload": {
+      "type": "object"
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Champs inconnus conservés sans interprétation; taille/profondeur bornées par transport."
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"message_type": {"const": "version.negotiate.request"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/version_negotiate_request"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "version.negotiate.response"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/version_negotiate_response"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "agent.enroll"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/agent_enroll"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "agent.enroll.result"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/agent_enroll_result"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "heartbeat"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/heartbeat"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "config.get.response"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/config_get_response"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "job.claim.request"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/job_claim_request"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "job.claim.response"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/job_claim_response"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "job.accept"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/job_accept"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "job.cancel"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/job_cancel"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "attempt.renew"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/attempt_renew"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "event.batch"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/event_batch"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "attempt.result"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/attempt_result"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "snapshot.reconcile"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/snapshot_reconcile"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "reconcile.request"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/reconcile_request"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "reconcile.response"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/reconcile_response"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "error"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/error"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "page.response"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/page_response"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "notification.delivery"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/notification_delivery"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "result.upload"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/result_upload"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "result.ack"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/result_ack"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "operator.job.request"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/operator_job_request"}}}
+    },
+    {
+      "if": {"properties": {"message_type": {"const": "operator.job.response"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/operator_job_response"}}}
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "uuid": {"type": "string", "format": "uuid"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "bounded_string": {"type": "string", "minLength": 1, "maxLength": 4096},
+    "extensions": {"type": "object", "maxProperties": 64},
+    "secret_ref": {
+      "type": "object",
+      "required": ["kind", "name"],
+      "properties": {
+        "kind": {"type": "string", "enum": ["env", "allowed_command", "os_secret_manager", "fnox"]},
+        "name": {"$ref": "#/$defs/bounded_string"},
+        "key": {"$ref": "#/$defs/bounded_string"}
+      },
+      "additionalProperties": false
+    },
+    "version_negotiate_request": {
+      "type": "object", "required": ["supported_schema_versions"],
+      "properties": {"supported_schema_versions": {"type": "array", "items": {"type": "integer", "minimum": 1}, "minItems": 1, "maxItems": 16}, "client_name": {"$ref": "#/$defs/bounded_string"}},
+      "additionalProperties": false
+    },
+    "version_negotiate_response": {
+      "type": "object", "required": ["selected_schema_version", "server_supported_schema_versions"],
+      "properties": {"selected_schema_version": {"type": "integer", "minimum": 1}, "server_supported_schema_versions": {"type": "array", "items": {"type": "integer", "minimum": 1}, "minItems": 1, "maxItems": 16}},
+      "additionalProperties": false
+    },
+    "agent_enroll": {"type": "object", "required": ["agent_name", "capabilities"], "properties": {"agent_name": {"$ref": "#/$defs/bounded_string"}, "capabilities": {"type": "array", "items": {"$ref": "#/$defs/bounded_string"}, "maxItems": 256}, "metadata": {"$ref": "#/$defs/extensions"}}, "additionalProperties": false},
+    "agent_enroll_result": {"type": "object", "required": ["agent_id", "status"], "properties": {"agent_id": {"$ref": "#/$defs/uuid"}, "status": {"type": "string", "enum": ["accepted", "rejected"]}, "reason": {"$ref": "#/$defs/bounded_string"}}, "additionalProperties": false},
+    "heartbeat": {"type": "object", "required": ["agent_status"], "properties": {"agent_status": {"type": "string", "enum": ["ready", "busy", "draining", "offline"]}, "active_attempt_ids": {"type": "array", "items": {"$ref": "#/$defs/uuid"}, "maxItems": 10000}}, "additionalProperties": false},
+    "config_get_response": {"type": "object", "required": ["config_version", "values"], "properties": {"config_version": {"type": "integer", "minimum": 1}, "values": {"type": "object", "maxProperties": 256}, "secret_refs": {"type": "array", "items": {"$ref": "#/$defs/secret_ref"}, "maxItems": 256}}, "additionalProperties": false},
+    "job_claim_request": {"type": "object", "required": ["agent_id"], "properties": {"agent_id": {"$ref": "#/$defs/uuid"}, "capacity": {"type": "integer", "minimum": 0, "maximum": 10000}}, "additionalProperties": false},
+    "job_claim_response": {"type": "object", "required": ["claim_status"], "properties": {"claim_status": {"type": "string", "enum": ["available", "empty", "expired"]}, "server_job_id": {"$ref": "#/$defs/uuid"}, "lease_expires_at": {"$ref": "#/$defs/timestamp"}, "job": {"$ref": "#/$defs/job_dto"}}, "additionalProperties": false},
+    "job_accept": {"type": "object", "required": ["server_job_id", "attempt_id", "lease_expires_at"], "properties": {"server_job_id": {"$ref": "#/$defs/uuid"}, "attempt_id": {"$ref": "#/$defs/uuid"}, "lease_expires_at": {"$ref": "#/$defs/timestamp"}, "idempotency_key": {"$ref": "#/$defs/bounded_string"}}, "additionalProperties": false},
+    "job_cancel": {"type": "object", "required": ["server_job_id", "reason"], "properties": {"server_job_id": {"$ref": "#/$defs/uuid"}, "reason": {"$ref": "#/$defs/bounded_string"}}, "additionalProperties": false},
+    "attempt_renew": {"type": "object", "required": ["attempt_id", "lease_expires_at"], "properties": {"attempt_id": {"$ref": "#/$defs/uuid"}, "lease_expires_at": {"$ref": "#/$defs/timestamp"}, "idempotency_key": {"$ref": "#/$defs/bounded_string"}}, "additionalProperties": false},
+    "event": {"type": "object", "required": ["event_id", "event_type", "occurred_at"], "properties": {"event_id": {"$ref": "#/$defs/uuid"}, "event_type": {"$ref": "#/$defs/bounded_string"}, "occurred_at": {"$ref": "#/$defs/timestamp"}, "data": {"type": "object", "maxProperties": 64}}, "additionalProperties": false},
+    "event_batch": {"type": "object", "required": ["attempt_id", "events"], "properties": {"attempt_id": {"$ref": "#/$defs/uuid"}, "events": {"type": "array", "items": {"$ref": "#/$defs/event"}, "maxItems": 10000}, "idempotency_key": {"$ref": "#/$defs/bounded_string"}}, "additionalProperties": false},
+    "step_result": {"type": "object", "required": ["step_id", "step_type", "status"], "properties": {"step_id": {"$ref": "#/$defs/bounded_string"}, "step_type": {"$ref": "#/$defs/bounded_string"}, "status": {"type": "string", "enum": ["queued", "running", "succeeded", "failed", "skipped"]}, "started_at": {"$ref": "#/$defs/timestamp"}, "finished_at": {"$ref": "#/$defs/timestamp"}, "error": {"$ref": "#/$defs/error_detail"}}, "additionalProperties": false},
+    "attempt_result": {"type": "object", "required": ["attempt_id", "server_job_id", "status", "idempotency_key", "steps"], "properties": {"attempt_id": {"$ref": "#/$defs/uuid"}, "server_job_id": {"$ref": "#/$defs/uuid"}, "local_job_uuid": {"$ref": "#/$defs/uuid"}, "status": {"type": "string", "enum": ["succeeded", "partial", "failed", "cancelled"]}, "started_at": {"$ref": "#/$defs/timestamp"}, "finished_at": {"$ref": "#/$defs/timestamp"}, "idempotency_key": {"$ref": "#/$defs/bounded_string"}, "steps": {"type": "array", "items": {"$ref": "#/$defs/step_result"}, "maxItems": 10000}}, "additionalProperties": false},
+    "snapshot_ref": {"type": "object", "required": ["snapshot_id", "repository_id"], "properties": {"snapshot_id": {"$ref": "#/$defs/bounded_string"}, "repository_id": {"$ref": "#/$defs/uuid"}, "observed_at": {"$ref": "#/$defs/timestamp"}, "size_bytes": {"type": "integer", "minimum": 0}}, "additionalProperties": false},
+    "snapshot_reconcile": {"type": "object", "required": ["repository_id", "snapshots"], "properties": {"repository_id": {"$ref": "#/$defs/uuid"}, "snapshots": {"type": "array", "items": {"$ref": "#/$defs/snapshot_ref"}, "maxItems": 100000}}, "additionalProperties": false},
+    "reconcile_request": {"type": "object", "required": ["repository_id", "observed_at"], "properties": {"repository_id": {"$ref": "#/$defs/uuid"}, "observed_at": {"$ref": "#/$defs/timestamp"}, "idempotency_key": {"$ref": "#/$defs/bounded_string"}}, "additionalProperties": false},
+    "reconcile_response": {"type": "object", "required": ["repository_id", "status"], "properties": {"repository_id": {"$ref": "#/$defs/uuid"}, "status": {"type": "string", "enum": ["accepted", "completed", "rejected"]}, "details": {"type": "object", "maxProperties": 64}}, "additionalProperties": false},
+    "error_detail": {"type": "object", "required": ["code", "message", "retryable"], "properties": {"code": {"$ref": "#/$defs/bounded_string"}, "message": {"$ref": "#/$defs/bounded_string"}, "retryable": {"type": "boolean"}}, "additionalProperties": false},
+    "error": {"type": "object", "required": ["code", "message", "retryable"], "properties": {"code": {"$ref": "#/$defs/bounded_string"}, "message": {"$ref": "#/$defs/bounded_string"}, "retryable": {"type": "boolean"}, "details": {"type": "object", "maxProperties": 64}}, "additionalProperties": false},
+    "page_response": {"type": "object", "required": ["items"], "properties": {"items": {"type": "array", "maxItems": 10000}, "next_cursor": {"$ref": "#/$defs/bounded_string"}}, "additionalProperties": false},
+    "notification_delivery": {"type": "object", "required": ["notification_id", "channel", "status"], "properties": {"notification_id": {"$ref": "#/$defs/uuid"}, "channel": {"$ref": "#/$defs/bounded_string"}, "status": {"type": "string", "enum": ["queued", "sent", "failed"]}, "idempotency_key": {"$ref": "#/$defs/bounded_string"}}, "additionalProperties": false},
+    "result_upload": {"type": "object", "required": ["attempt_id", "content_ref", "idempotency_key"], "properties": {"attempt_id": {"$ref": "#/$defs/uuid"}, "content_ref": {"$ref": "#/$defs/bounded_string"}, "idempotency_key": {"$ref": "#/$defs/bounded_string"}}, "additionalProperties": false},
+    "result_ack": {"type": "object", "required": ["attempt_id", "status"], "properties": {"attempt_id": {"$ref": "#/$defs/uuid"}, "status": {"type": "string", "enum": ["accepted", "duplicate", "rejected"]}}, "additionalProperties": false},
+    "job_dto": {"type": "object", "required": ["server_job_id", "repository_id", "policy_id"], "properties": {"server_job_id": {"$ref": "#/$defs/uuid"}, "repository_id": {"$ref": "#/$defs/uuid"}, "policy_id": {"$ref": "#/$defs/uuid"}, "hooks": {"type": "array", "items": {"$ref": "#/$defs/hook"}, "maxItems": 256}}, "additionalProperties": false},
+    "hook": {"type": "object", "required": ["name", "allowed_command_ref"], "properties": {"name": {"$ref": "#/$defs/bounded_string"}, "allowed_command_ref": {"$ref": "#/$defs/bounded_string"}, "secret_refs": {"type": "array", "items": {"$ref": "#/$defs/secret_ref"}, "maxItems": 32}}, "additionalProperties": false},
+    "operator_job_request": {"type": "object", "required": ["repository_id", "policy_id", "idempotency_key"], "properties": {"repository_id": {"$ref": "#/$defs/uuid"}, "policy_id": {"$ref": "#/$defs/uuid"}, "idempotency_key": {"$ref": "#/$defs/bounded_string"}, "requested_by": {"$ref": "#/$defs/bounded_string"}}, "additionalProperties": false},
+    "operator_job_response": {"type": "object", "required": ["status"], "properties": {"status": {"type": "string", "enum": ["accepted", "rejected", "duplicate"]}, "server_job_id": {"$ref": "#/$defs/uuid"}, "reason": {"$ref": "#/$defs/bounded_string"}}, "additionalProperties": false}
+  }
+}
