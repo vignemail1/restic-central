@@ -1,37 +1,48 @@
 # restic-central
 
-> **STATUT : IDÉE DE PROJET / PHASE DE CONCEPTION — NON PRÊT POUR LA PRODUCTION.**
-> Aucun agent, serveur ou interface opérationnel n’est fourni. Les fonctionnalités décrites sont des objectifs non implémentés et non validés. Ne pas utiliser ce projet pour protéger des données réelles.
-
 ## Objectif
 
-Concevoir un orchestrateur de sauvegardes Restic multi-machines : agents et serveur Go, binaires statiques multi-OS, API REST, supervision et interface web opérateur. Restic reste le moteur de sauvegarde ; le serveur central n’héberge pas les dépôts de sauvegarde.
+`restic-central` fournit un serveur central et un agent local pour orchestrer des sauvegardes Restic, sans confondre observation, exécution et preuve de réussite. Un repository appartient exclusivement à une machine et un seul backup est actif par machine.
 
 ## État du projet
 
-Les décisions acceptées sont des engagements de conception, pas des fonctionnalités livrées. Les commandes, champs et endpoints restent illustratifs. Aucun résultat de test, lint, benchmark ou audit n’est revendiqué. La licence, les versions prises en charge et les modalités de distribution restent à définir.
+**Documentation consolidée — conception validée, implémentation non livrée.** Le dépôt n'est pas déclarable en production tant que l'agent, le serveur, les migrations, les contrats, les tests de panne et le runbook de restauration ne sont pas présents et validés.
 
-## Documentation
+Les décisions les plus récentes et le cadrage exécutable sont regroupés dans :
 
-### Autorité et statut
+- [Décisions consolidées et audit du 2026-10-21](docs/18-audit-decisions-2026-10-21.md)
+- [Cadrage LLM-ready](docs/17-cadrage-llm-ready.md)
+- [Schéma bootstrap JSON Schema v1](docs/19-schema-bootstrap-v1.json)
 
-- [Spécifications révisées](docs/09-specifications-revisees.md) : référence normative actuelle pour les sujets qu’elles traitent. Elles remplacent les orientations initiales incompatibles.
-- [Registre des décisions](docs/07-decisions.md) : statut des décisions (exigence, acceptée, proposée, remplacée ou ouverte) ; il ne remplace pas les spécifications détaillées. En cas d’écart, vérifier le statut dans ce registre et clarifier toute contradiction avant implémentation.
-- Les documents 01–08 décrivent la conception initiale et restent utiles comme historique et contexte. Ne pas les interpréter comme exigences courantes lorsqu’ils contredisent les spécifications révisées.
-- [Glossaire](docs/14-glossaire.md) : source unique des définitions des termes du domaine.
-- [Modèles et relations](docs/15-modeles-relations.md) : propositions de cardinalités, relations et invariants ; ce n’est ni un schéma SQL livré ni une source alternative de définitions.
-- Les documents 11–13 apportent des analyses complémentaires, sous réserve du statut indiqué dans chacun. Ils ne supplantent pas les spécifications révisées.
-- [Décisions validées pour le développement](docs/16-decisions-for-development.md) : ordre de livraison et décisions de conception validées, sans présumer de leur implémentation.
+La documentation historique reste disponible ; ces trois fichiers constituent l'index de référence pour l'implémentation à venir. Aucune décision historique n'est supprimée par cette synchronisation.
 
-### Parcours de lecture
+## Parcours de lecture
 
-1. [Spécifications révisées — référence normative](docs/09-specifications-revisees.md)
-2. [Registre des décisions](docs/07-decisions.md) et [décisions validées pour le développement](docs/16-decisions-for-development.md)
-3. [Vision initiale](docs/01-vision-exigences.md) et [architecture initiale](docs/02-architecture-modele.md)
-4. Configuration/exécution, [API/fiabilité](docs/04-api-fiabilite.md), sécurité/exploitation et notifications : documents 03–06
-5. [Plan de validation](docs/08-roadmap-validation.md)
-6. Analyses complémentaires : documents 11–13, puis [glossaire](docs/14-glossaire.md) et [modèle conceptuel](docs/15-modeles-relations.md)
+1. [Vision et exigences](docs/01-vision-exigences.md)
+2. [Architecture et modèle](docs/02-architecture-modele.md)
+3. [Configuration et exécution](docs/03-configuration-execution.md)
+4. [API et fiabilité](docs/04-api-fiabilite.md)
+5. [Sécurité et exploitation](docs/05-securite-exploitation.md)
+6. [Décisions](docs/07-decisions.md)
+7. [Roadmap et validation](docs/08-roadmap-validation.md)
+8. [Spécifications révisées](docs/09-specifications-revisees.md)
+9. [PostgreSQL](docs/11-decision-postgresql.md)
+10. [Isolation des repositories](docs/12-isolation-repositories.md)
+11. [Rétention et planning](docs/13-retention-planning.md)
+12. [Modèles et relations](docs/15-modeles-relations.md)
+13. [Décisions de développement historiques](docs/16-decisions-for-development.md)
+14. [Cadrage LLM-ready normatif](docs/17-cadrage-llm-ready.md)
+15. [Audit et décisions consolidées](docs/18-audit-decisions-2026-10-21.md)
+16. [Contrat bootstrap v1](docs/19-schema-bootstrap-v1.json)
 
-Les documents sont organisés par rôle : une définition se maintient dans le glossaire ; les documents thématiques décrivent les exigences et comportements ; le modèle conceptuel décrit les relations. Éviter de recopier une définition : ajouter plutôt un lien vers sa source canonique.
+## Statut des gates
 
-> **Note sur le document 10 :** `docs/10-options-statistiques.md` est publié, mais reste un document de conception **NON PRÊT POUR LA PRODUCTION**. Toute référence à son contenu doit être interprétée dans ce cadre.
+- [ ] Agent et serveur Go 1.27.x, initialement Linux amd64
+- [ ] Persistance durable, migrations, API et contrats versionnés
+- [ ] Outbox at-least-once, déduplication et saturation observable
+- [ ] Hooks, sémantique `failed`/`partial`/`unknown` et tests de panne
+- [ ] Enrollment, LDAP StartTLS, sessions, CSRF et audit opérateur
+- [ ] Restic >= 0.19.0, packaging, SBOM/licences et builds reproductibles
+- [ ] Export quotidien, inventaire et restauration démontrée en <=24 h
+
+Les cibles futures de build sont macOS arm64 et Windows amd64 ; le serveur et l'agent MVP restent Linux amd64 jusqu'à preuve de compatibilité.
