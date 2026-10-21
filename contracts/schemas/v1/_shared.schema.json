@@ -1,5 +1,5 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://restic-central.invalid/schemas/v1/_shared.schema.json",
-  "$defs": {}
+  "$ref": "../../../docs/20-exchanges-v1.schema.json",
+  "$comment": "Contrat partagé v1. Les références relatives doivent être résolues depuis ce fichier ; ne pas déplacer les schémas isolément."
 }

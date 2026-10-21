@@ -1,1 +1,1 @@
-{}
+{"$schema":"https://json-schema.org/draft/2020-12/schema","allOf":[{"$ref":"_shared.schema.json"},{"properties":{"message_type":{"const":"config.get.response"}},"required":["message_type"]}]}
