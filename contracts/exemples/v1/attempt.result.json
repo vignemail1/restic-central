@@ -2,6 +2,60 @@
   "schema_version": 1,
   "message_id": "11111111-1111-4111-8111-111111111111",
   "sent_at": "2026-10-21T12:00:00Z",
-  "payload": {"attempt_id":"11111111-1111-4111-8111-111111111111","server_job_id":"11111111-1111-4111-8111-111111111111","local_job_uuid":"11111111-1111-4111-8111-111111111111","status":"succeeded","started_at":"2026-10-21T12:00:00Z","finished_at":"2026-10-21T12:00:00Z","steps":[{"step_id":"example","step_type":"backup","status":"succeeded","started_at":"2026-10-21T12:00:00Z","finished_at":"2026-10-21T12:00:00Z","exit_code":0}],"idempotency_key":"example","snapshot":{"repository_id":"11111111-1111-4111-8111-111111111111","restic_snapshot_id":"0123456789abcdef0123456789abcdef","observed_at":"2026-10-21T12:00:00Z","provenance":"created"},"restic_json":{"backup":{"message_type":"summary","files_new":1,"files_changed":0,"files_unmodified":0,"dirs_new":1,"dirs_changed":0,"dirs_unmodified":0,"data_blobs":1,"tree_blobs":1,"data_added":1024,"total_files_processed":1,"total_bytes_processed":1024,"snapshot_id":"0123456789abcdef0123456789abcdef"},"snapshots":[{"id":"0123456789abcdef0123456789abcdef","short_id":"01234567","time":"2026-10-21T12:00:00Z","tree":"fedcba9876543210fedcba9876543210","paths":["/srv/example"],"hostname":"example-host","username":"backup"}]}},
+  "payload": {
+    "attempt_id": "11111111-1111-4111-8111-111111111111",
+    "server_job_id": "11111111-1111-4111-8111-111111111111",
+    "local_job_uuid": "11111111-1111-4111-8111-111111111111",
+    "status": "succeeded",
+    "started_at": "2026-10-21T12:00:00Z",
+    "finished_at": "2026-10-21T12:00:00Z",
+    "steps": [
+      {
+        "step_id": "example",
+        "step_type": "backup",
+        "status": "succeeded",
+        "started_at": "2026-10-21T12:00:00Z",
+        "finished_at": "2026-10-21T12:00:00Z",
+        "exit_code": 0
+      }
+    ],
+    "idempotency_key": "example",
+    "snapshot": {
+      "repository_id": "11111111-1111-4111-8111-111111111111",
+      "restic_snapshot_id": "0123456789abcdef0123456789abcdef",
+      "observed_at": "2026-10-21T12:00:00Z",
+      "provenance": "created"
+    },
+    "restic_json": {
+      "backup": {
+        "message_type": "summary",
+        "files_new": 1,
+        "files_changed": 0,
+        "files_unmodified": 0,
+        "dirs_new": 1,
+        "dirs_changed": 0,
+        "dirs_unmodified": 0,
+        "data_blobs": 1,
+        "tree_blobs": 1,
+        "data_added": 1024,
+        "total_files_processed": 1,
+        "total_bytes_processed": 1024,
+        "snapshot_id": "0123456789abcdef0123456789abcdef"
+      },
+      "snapshots": [
+        {
+          "id": "0123456789abcdef0123456789abcdef",
+          "short_id": "01234567",
+          "time": "2026-10-21T12:00:00Z",
+          "tree": "fedcba9876543210fedcba9876543210",
+          "paths": [
+            "/srv/example"
+          ],
+          "hostname": "example-host",
+          "username": "backup"
+        }
+      ]
+    }
+  },
   "message_type": "attempt.result"
 }

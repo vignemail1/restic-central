@@ -2,6 +2,13 @@
   "schema_version": 1,
   "message_id": "11111111-1111-4111-8111-111111111111",
   "sent_at": "2026-10-21T12:00:00Z",
-  "payload": {"server_job_id":"11111111-1111-4111-8111-111111111111","local_job_uuid":"11111111-1111-4111-8111-111111111111","request_id":"11111111-1111-4111-8111-111111111111","state":"cancel_requested","reason":"example","requested_at":"2026-10-21T12:00:00Z"},
+  "payload": {
+    "server_job_id": "11111111-1111-4111-8111-111111111111",
+    "local_job_uuid": "11111111-1111-4111-8111-111111111111",
+    "request_id": "11111111-1111-4111-8111-111111111111",
+    "state": "cancel_requested",
+    "reason": "example",
+    "requested_at": "2026-10-21T12:00:00Z"
+  },
   "message_type": "job.cancel"
 }

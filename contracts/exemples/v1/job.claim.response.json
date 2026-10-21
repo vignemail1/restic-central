@@ -2,6 +2,9 @@
   "schema_version": 1,
   "message_id": "11111111-1111-4111-8111-111111111111",
   "sent_at": "2026-10-21T12:00:00Z",
-  "payload": {"decision":"none","sent_at":"2026-10-21T12:00:00Z"},
+  "payload": {
+    "decision": "none",
+    "sent_at": "2026-10-21T12:00:00Z"
+  },
   "message_type": "job.claim.response"
 }
