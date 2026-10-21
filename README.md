@@ -21,12 +21,11 @@ Les décisions acceptées sont des engagements de conception, pas des fonctionna
 - [Glossaire](docs/14-glossaire.md) : source unique des définitions des termes du domaine.
 - [Modèles et relations](docs/15-modeles-relations.md) : propositions de cardinalités, relations et invariants ; ce n’est ni un schéma SQL livré ni une source alternative de définitions.
 - Les documents 11–13 apportent des analyses complémentaires, sous réserve du statut indiqué dans chacun. Ils ne supplantent pas les spécifications révisées.
-- [Décisions validées pour le développement](docs/16-decisions-for-development.md) : ordre de livraison et décisions de conception validées, sans présumer de leur implémentation.
 
 ### Parcours de lecture
 
 1. [Spécifications révisées — référence normative](docs/09-specifications-revisees.md)
-2. [Registre des décisions](docs/07-decisions.md) et [décisions validées pour le développement](docs/16-decisions-for-development.md)
+2. [Registre des décisions](docs/07-decisions.md)
 3. [Vision initiale](docs/01-vision-exigences.md) et [architecture initiale](docs/02-architecture-modele.md)
 4. Configuration/exécution, [API/fiabilité](docs/04-api-fiabilite.md), sécurité/exploitation et notifications : documents 03–06
 5. [Plan de validation](docs/08-roadmap-validation.md)
@@ -34,4 +33,4 @@ Les décisions acceptées sont des engagements de conception, pas des fonctionna
 
 Les documents sont organisés par rôle : une définition se maintient dans le glossaire ; les documents thématiques décrivent les exigences et comportements ; le modèle conceptuel décrit les relations. Éviter de recopier une définition : ajouter plutôt un lien vers sa source canonique.
 
-> **Note sur le document 10 :** `docs/10-options-statistiques.md` n’est pas publié. Toute référence à son contenu doit être considérée comme une piste de travail, pas comme une documentation disponible.
+> **Note sur le document 10 :** `docs/10-options-statistiques.md` est publié, mais reste un document de conception **NON PRÊT POUR LA PRODUCTION**. Toute référence à son contenu doit être interprétée dans ce cadre.
