@@ -23,10 +23,10 @@ Le terme « agent autonome » à l’étape 1 signifie une exécution configuré
 - Si aucun pre-hook n’est configuré, le code de sortie du backup Restic détermine si l’opération de backup réussit.
 - Si un pre-hook est configuré, il doit retourner le code de sortie 0 avant le démarrage de Restic. Un pre-hook échoué empêche la phase de backup.
 - Si aucun post-hook n’est configuré, le job réussit lorsque Restic réussit.
-- Si un post-hook est configuré, le job réussit lorsque le post-hook retourne 0 ; si le post-hook échoue après un backup Restic réussi, le job est partiel.
+- Si un post-hook est configuré, le job réussit lorsque le backup Restic réussit et que le post-hook retourne 0 ; si le post-hook échoue après un backup Restic réussi, le job est partiel. Un échec du backup primaire reste `failed`, même si un post-hook de cleanup réussit.
 - Préserver les résultats individuels des hooks, du backup primaire et de la réplication ; le statut agrégé du job ne doit pas effacer les résultats par étape.
 
-Le statut précis lorsque le backup primaire échoue et que le post-hook échoue aussi, ainsi que le comportement avec plusieurs hooks ou réplicas, nécessitent encore une spécification explicite avant l’implémentation de l’agrégation.
+Lorsque le backup primaire échoue, le job est `failed`, y compris si un post-hook échoue simultanément ; les résultats des deux étapes sont conservés séparément. Le comportement avec plusieurs hooks ou réplicas nécessite encore une spécification explicite avant l’implémentation de l’agrégation.
 
 ## 3. BackupJobs planifiés par le serveur
 
@@ -75,3 +75,4 @@ Cela ne choisit ni une version majeure de PostgreSQL, ni la syntaxe/valeur par d
 Chaque étape de livraison ci-dessus possède des tests unitaires, d’intégration et de chemins d’échec adaptés à son périmètre. En particulier, tester la durabilité de l’Outbox après redémarrage et panne serveur ; le contrôle des codes de sortie des hooks ; le statut partiel en cas de réplication/post-hook échoué ; le remplacement des jobs planifiés et le reporting de leur annulation ; la livraison des résultats `forget`/`prune` hors ligne ; la validation des versions de schéma ; la restauration PostgreSQL complète ; l’authentification LDAP/locale ; et la couverture d’audit sans fuite de secrets.
 
 Une étape de développement n’est pas terminée simplement parce que la fonctionnalité compile. Ne pas activer la rétention destructive dans des environnements proches de la production avant la réussite des tests d’isolation, de gestion des jobs obsolètes et de reprise/restauration.
+

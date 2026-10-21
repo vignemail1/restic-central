@@ -64,4 +64,4 @@ scheduled -> queued -> claimed -> running
 
 ## Persistance
 
-Le moteur de stockage du serveur reste à déterminer dans cette conception initiale. Exiger des transactions, des contraintes d’unicité, des migrations et des procédures de backup et de restore testées. L’agent a besoin d’un stockage local persistant pour son outbox et ses tentatives. SQLite est une option à évaluer, pas un choix accepté.
+Le serveur utilise **PostgreSQL** comme moteur de persistance ; cette décision acceptée remplace l’orientation historique « moteur à déterminer » et l’option SQLite pour le serveur (voir [07-decisions.md](07-decisions.md) et [11-decision-postgresql.md](11-decision-postgresql.md)). Exiger des transactions, des contraintes d’unicité, des migrations et des procédures de backup/restore testées. L’agent a besoin d’un stockage local persistant pour son Outbox et ses tentatives ; son backend local reste à spécifier et n’implique pas PostgreSQL côté client.

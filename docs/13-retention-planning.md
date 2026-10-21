@@ -14,7 +14,7 @@ Ne pas confondre `forget`, qui retire les snapshots sélectionnés, et `prune`, 
 
 ## 2. Sémantique des critères
 
-**PROPOSITION :** appliquer la policy par machine, profile et repository. Combiner les critères par union : conserver ce qui satisfait `keep-last` OU `keep-after`, puis ajouter les protections. Si un seul critère est configuré, appliquer celui-ci. Sans critère, ne rien supprimer.
+**Règle normative :** appliquer la policy par machine, profile et repository. Combiner les critères par union : conserver ce qui satisfait `keep-last` OU `keep-after`, puis ajouter les protections. **Protéger au minimum le dernier snapshot valide de chaque périmètre machine/profile/repository**, indépendamment des critères. Si aucun snapshot valide n’existe, ne pas fabriquer de protection ; si l’historique est incomplet ou incertain, ne pas supprimer automatiquement. Sans critère, ne rien supprimer.
 
 `keep-last` compte des jobs logiques réussis, pas les tentatives ni les copies. **PROPOSITION :** utiliser la réussite complète du job de backup selon sa règle globale ; trier par date de fin puis identifiant stable. Un résultat incomplet ne devient pas réussi par la seule présence d’un snapshot.
 
@@ -34,7 +34,7 @@ Ne pas assimiler `keep-last` jobs réussis à `--keep-last` snapshots. Ne pas as
 
 L’agent inspecte les métadonnées des snapshots, réconcilie les associations aux jobs, calcule les ensembles conservés et supprimables, puis appelle `forget` sur les IDs explicitement sélectionnés. Aucun inventaire des fichiers sauvegardés n’est nécessaire.
 
-**PROPOSITION de sécurité :** préserver les snapshots non identifiés, à réussite inconnue, utilisés par une copy obligatoire en attente ou explicitement protégés. En cas d’historique incomplet, de correspondance perdue ou de doute sur l’appartenance au profile, ne pas supprimer automatiquement.
+**Règle normative de sécurité :** préserver les snapshots non identifiés, à réussite inconnue ou explicitement protégés, ainsi que le dernier snapshot valide du périmètre. En cas d’historique incomplet, de correspondance perdue ou de doute sur l’appartenance au profile, ne pas supprimer automatiquement.
 
 Valider que X est un entier strictement positif ; toute policy autorisant une suppression totale exige un choix explicite distinct. Ne jamais appliquer `forget` aux snapshots d’un autre profile. Avant application, vérifier de nouveau les préconditions et la disponibilité des snapshots ciblés sous coordination locale ; persister un plan expurgé indiquant seuil et nombres conservés/supprimés.
 
@@ -78,7 +78,7 @@ La réservation d’une tâche future est distincte du lease d’exécution : ne
 
 ## 7. Types de jobs de maintenance
 
-Prévoir `forget`, `prune`, `check` et `stats` avec un calendrier propre à chaque repository appartenant à la machine. La réplication `copy` liée au backup et les contrôles après `prune` peuvent être modélisés par des dépendances explicites. Ce document ne valide pas automatiquement l’ensemble du workflow de maintenance proposé précédemment.
+Prévoir `forget`, `prune`, `check` et `stats` avec un calendrier propre à chaque repository appartenant à la machine. `forget` ne peut jamais supprimer le dernier snapshot valide protégé par la règle ci-dessus. La réplication `copy` liée au backup et les contrôles après `prune` peuvent être modélisés par des dépendances explicites. Ce document ne valide pas automatiquement l’ensemble du workflow de maintenance proposé précédemment.
 
 ## 8. Validation
 

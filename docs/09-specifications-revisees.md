@@ -44,7 +44,7 @@ Séquence recommandée : lock machine -> prérequis -> pre-hooks -> backup prima
 
 **Règles de résultat validées (périmètre défini) :** un pre-hook configuré doit retourner 0 avant le démarrage du backup Restic ; sans pre-hook, le code de sortie Restic détermine la réussite du backup. Sans post-hook, le job réussit si Restic réussit. Avec un post-hook, le job réussit si le hook retourne 0 ; un post-hook échoué après un backup Restic réussi rend le job partiel. Préserver individuellement les résultats des hooks, du backup primaire et de la réplication.
 
-Un pre-hook requis échoué empêche le backup. Un post-hook de cleanup n’est tenté après un échec antérieur que si sa condition configurée l’autorise. Le statut si backup primaire et post-hook échouent tous deux, l’agrégation de plusieurs hooks, le périmètre exact de chaque étape et les conditions restent ouverts. Une annulation ou un crash ne garantit pas le cleanup : documenter la reprise et le nettoyage manuel. La limite globale inclut les hooks ; chaque hook possède également sa propre limite.
+Un pre-hook requis échoué empêche le backup. Un post-hook de cleanup n’est tenté après un échec antérieur que si sa condition configurée l’autorise. Si le backup primaire échoue, le job est `failed`, y compris lorsqu’un post-hook échoue simultanément ; les résultats des deux étapes sont conservés séparément. L’agrégation de plusieurs hooks, le périmètre exact de chaque étape et les conditions restent à préciser. Une annulation ou un crash ne garantit pas le cleanup : documenter la reprise et le nettoyage manuel. La limite globale inclut les hooks ; chaque hook possède également sa propre limite.
 
 La cohérence applicative est hors périmètre : l’opérateur est responsable de préparer des fichiers cohérents via les pre-hooks. Le produit orchestre et rend compte ; il ne certifie pas la cohérence d’une base de données.
 
@@ -96,7 +96,7 @@ Restic reste un exécutable distinct dont l’installation, la version et la val
 
 **Périmètre initial d’authentification validé :** utilisateurs OpenLDAP utilisant `posixAccount` avec filtre de recherche configurable, ainsi que des comptes locaux dont un superadmin local. Chaque action opérateur doit être auditée, notamment login, logout, modifications, créations et enrôlement d’agent.
 
-La procédure exacte de recherche/bind, le base DN, le mapping de groupes facultatif, l’attribution des rôles, les exigences TLS, les sessions sécurisées, les contrôles d’autorisation, la résistance à l’altération et la rétention de l’audit restent à spécifier. Une authentification LDAP réussie n’implique pas des privilèges administrateur. La récupération du compte d’urgence et les pannes LDAP restent à traiter. Protéger les actions web contre CSRF.
+La procédure exacte de recherche/bind, le base DN, l’attribution des rôles et le mapping de groupes LDAP (évolution future différée, non blocker du périmètre initial), les exigences TLS, les sessions sécurisées, les contrôles d’autorisation, la résistance à l’altération et la rétention de l’audit restent à spécifier. Une authentification LDAP réussie n’implique pas des privilèges administrateur. La récupération du compte d’urgence et les pannes LDAP restent à traiter. Protéger les actions web contre CSRF.
 
 ## 11. Export serveur cohérent
 
