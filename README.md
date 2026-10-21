@@ -12,6 +12,7 @@
 - [README des contrats séparés](contracts/README.md)
 - Schémas : `contracts/schemas/v1/<message>.schema.json`
 - Exemples : `contracts/exemples/v1/<message>.json`
+- Validation locale : `python3 scripts/validate-contracts.py` (dépendance `jsonschema`)
 
 Les anciens documents restent disponibles. La restructuration ne supprime pas d’information historique : le contrat monolithique est conservé comme référence de transition jusqu’à validation d’une migration complète.
 
